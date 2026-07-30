@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
     <http:listener-config name="ecommercesuiteprocessapi-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8082" />
     </http:listener-config>
@@ -419,12 +420,24 @@ payload[0]]]></ee:set-payload>
         </error-handler>
     </flow>
     <flow name="delete:\products\(productId):ecommercesuiteprocessapi-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:variables>
-                <ee:set-variable variableName="productId">attributes.uriParams.'productId'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <logger level="INFO" message="delete:\products\(productId):ecommercesuiteprocessapi-config" />
+        <logger level="INFO" message='#["Delete request received for ProductdId:" ++ attributes.uriParams.productId]' />
+		<flow-ref doc:name="ownershipCheckForProductId" doc:id="d32d2b37-f0e0-4ed3-86d5-69ddeebd3dae" name="ownershipCheckForProductId"/>
+		<http:request method="DELETE" doc:name="DELETE/database/products/{productId}" doc:id="5a9ba0b3-8335-4fac-899c-fbffaf7581fc" config-ref="HTTP_Request_configuration" path="/products/{productId}">
+			<http:body ><![CDATA[#[null]]]></http:body>
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"productId" : attributes.uriParams.productId
+}]]]></http:uri-params>
+		</http:request>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="66b08a94-05d0-43b1-819e-c38ba3edb23b" type="APP:FORBIDDEN" >
+				<set-variable value="403" doc:name="httpStatus 403" doc:id="f72cd957-5f68-4d4f-b095-f3afc3f7bc37" variableName="httpStatus" />
+			</on-error-propagate>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate1" doc:id="c20baf37-d690-47fe-b9e1-5b6fc252c3d8" when="#[error.errorMessage.attributes.statusCode == 404]" >
+				<set-variable value="404" doc:name="httpStatus 404" doc:id="c1dcc61f-9ac6-4fd2-979c-12467db3d291" variableName="httpStatus" />
+			</on-error-propagate>
+		</error-handler>
     </flow>
     <flow name="patch:\products\(productId)\restock:application\json:ecommercesuiteprocessapi-config">
         <logger level="INFO" message="Processing restocking logic." />
