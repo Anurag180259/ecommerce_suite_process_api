@@ -3,7 +3,7 @@
     <http:listener-config name="ecommercesuiteprocessapi-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8082" />
     </http:listener-config>
-    <apikit:config name="ecommercesuiteprocessapi-config" api="resource::297e1185-2a7e-4734-9d69-effb0bb9fbe9:ecommercesuiteprocessapi:1.0.5:raml:zip:ecommercesuiteprocessapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <apikit:config name="ecommercesuiteprocessapi-config" api="resource::297e1185-2a7e-4734-9d69-effb0bb9fbe9:ecommercesuiteprocessapi:1.0.8:raml:zip:ecommercesuiteprocessapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="a18d8e92-845e-4493-b76c-356748915a65" basePath="/database">
         <http:request-connection host="localhost" port="8083" />
     </http:request-config>
@@ -148,7 +148,7 @@ output application/json
         <http:request method="POST" doc:name="POST/database/stores" doc:id="6d32e31a-de87-4743-ada1-3e1ee36a019f" config-ref="HTTP_Request_configuration" path="/stores" target="postStoreResponse" />
         <error-handler>
             <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="8e1fb2d5-2227-456f-a1f8-a130adeeefd4" when="#[error.errorMessage.attributes.statusCode == 409]">
-                <set-variable value="409" doc:name="httpStatus" doc:id="df129c9e-eba6-405d-bf56-2f1c261507bb" variableName="httpStatus" />
+                <set-variable value="409" doc:name="httpStatus 409" doc:id="df129c9e-eba6-405d-bf56-2f1c261507bb" variableName="httpStatus" />
             </on-error-propagate>
         </error-handler>
     </flow>
@@ -194,12 +194,10 @@ output application/json
         </ee:transform>
         <error-handler>
             <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f0a9fefc-7ed1-405a-9ec6-034b04ea85d7" type="APP:USER_NOT_FOUND">
-                <set-variable value="404" doc:name="httpStatus" doc:id="4c4cd128-bf09-4c69-85cb-2c8aa52fee38" variableName="httpStatus" />
-                <set-payload value="#[&quot;USER NOT FOUND&quot;]" doc:name="Set Payload" doc:id="b96f22e3-02f7-4f9f-ac90-747fa9cd3c5b" />
+                <set-variable value="404" doc:name="httpStatus 404" doc:id="4c4cd128-bf09-4c69-85cb-2c8aa52fee38" variableName="httpStatus" />
             </on-error-propagate>
             <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ce87be89-9a56-441f-9aec-b1e753d264a6" type="APP:PASSWORD_MISMATCH">
-                <set-variable value="401" doc:name="httpStatus" doc:id="e0b6b116-c91c-4a27-925e-65627377b88a" variableName="httpStatus" />
-                <set-payload value="#[&quot;PLEASE PROVIDE CORRECT PASSWORD&quot;]" doc:name="Set Payload" doc:id="061b706d-40d3-4f6b-a9f4-78af14305553" />
+                <set-variable value="401" doc:name="httpStatus 401" doc:id="e0b6b116-c91c-4a27-925e-65627377b88a" variableName="httpStatus" />
             </on-error-propagate>
         </error-handler>
     </flow>
@@ -321,10 +319,10 @@ output application/json
         </http:request>
         <choice doc:name="Choice" doc:id="795afc77-e97d-4465-9544-9346f9262838">
             <when expression="#[((vars.storeData)[0]).userId != payload.userId]">
-                <raise-error doc:name="Raise error" doc:id="3cf559f0-d17d-4a9f-9088-0b1f76951859" type="APP:FORBIDDEN" />
+                <raise-error doc:name="APP:FORBIDDEN" doc:id="3cf559f0-d17d-4a9f-9088-0b1f76951859" type="APP:FORBIDDEN" />
             </when>
             <when expression="#[((vars.storeData)[0]).verificationStatus != &quot;verified&quot;]">
-                <raise-error doc:name="Raise error" doc:id="9959ebf6-db73-47db-bd33-1be5cc409d54" type="APP:UNVERIFIED" />
+                <raise-error doc:name="APP:UNVERIFIED" doc:id="9959ebf6-db73-47db-bd33-1be5cc409d54" type="APP:UNVERIFIED" />
             </when>
         </choice>
         <set-variable value="#[&quot;P-&quot; ++ uuid()[0 to 5]]" doc:name="productId" doc:id="04643dd4-7e14-48a4-ac6c-02c4c0771285" variableName="productId" />
@@ -363,38 +361,130 @@ output application/json
                 <set-variable value="403" doc:name="httpStatus 403" doc:id="4ca15c8c-5298-4af8-bd76-7f981a4d4786" variableName="httpStatus" />
             </on-error-propagate>
             <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="c005797c-938a-40c1-9268-50b9720cf209" type="APP:UNVERIFIED">
-                <set-variable value="401" doc:name="httpStatus" doc:id="d95a1235-f998-4a79-a4da-f34266f15cee" variableName="httpStatus" />
+                <set-variable value="401" doc:name="httpStatus 401" doc:id="d95a1235-f998-4a79-a4da-f34266f15cee" variableName="httpStatus" />
             </on-error-propagate>
         </error-handler>
     </flow>
     <flow name="get:\products:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message="get:\products:ecommercesuiteprocessapi-config" />
+        <logger level="INFO" message="Getting list of products by filters" />
+        <http:request method="GET" doc:name="GET/products" doc:id="c73e806f-7109-40bb-950b-b47b61c28e8e" config-ref="HTTP_Request_configuration" path="/products">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"brand" : attributes.queryParams.brand,
+	"category":attributes.queryParams.category,
+	"subCategory":attributes.queryParams.subCategory,
+	"maxPrice":attributes.queryParams.maxPrice,
+	"minPrice":attributes.queryParams.minPrice,
+	"inStock":attributes.queryParams.inStock,
+	"minRatings":attributes.queryParams.minRatings,
+	"storeName":attributes.queryParams.storeName
+}filterObject((value, key) -> value != null)]]]></http:query-params>
+        </http:request>
     </flow>
     <flow name="get:\stores\(storeId)\products:ecommercesuiteprocessapi-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:variables>
-                <ee:set-variable variableName="storeId">attributes.uriParams.'storeId'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <logger level="INFO" message="get:\stores\(storeId)\products:ecommercesuiteprocessapi-config" />
+        <logger level="INFO" message="Processing product data retrieval by storeId." />
+        <http:request method="GET" doc:name="GET/database/products" doc:id="de0e948c-1949-493f-a389-a03bc7bfb4c7" config-ref="HTTP_Request_configuration" path="/products">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"storeId" : attributes.uriParams.storeId
+}]]]></http:query-params>
+        </http:request>
     </flow>
     <flow name="get:\products\(productId):ecommercesuiteprocessapi-config">
-		<logger level="INFO" message="Processing GET poducts by productId" />
-		<http:request method="GET" doc:name="GET/products/{productId}" doc:id="b574e4be-b68e-46a4-a5db-747f51b097aa" config-ref="HTTP_Request_configuration" path="/products/{productId}">
-			<http:body ><![CDATA[#[null]]]></http:body>
+        <logger level="INFO" message="Processing GET poducts by productId" />
+        <http:request method="GET" doc:name="GET/products/{productId}" doc:id="b574e4be-b68e-46a4-a5db-747f51b097aa" config-ref="HTTP_Request_configuration" path="/products/{productId}">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"productId" : attributes.uriParams.productId
+}]]]></http:uri-params>
+        </http:request>
+        <ee:transform doc:name="Transform Message" doc:id="72357aa6-b1f9-4a23-81fb-9f06357ada20">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload[0]]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="286d7562-faf6-48db-8b30-5e6e4936c707" when="#[error.errorMessage.attributes.statusCode == 404]">
+                <set-variable value="404" doc:name="httpStatus 404" doc:id="b4b14036-a39f-469e-9572-c82a7c3c0492" variableName="httpStatus" />
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="delete:\products\(productId):ecommercesuiteprocessapi-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="productId">attributes.uriParams.'productId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" message="delete:\products\(productId):ecommercesuiteprocessapi-config" />
+    </flow>
+    <flow name="patch:\products\(productId)\restock:application\json:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message="Processing restocking logic." />
+        <flow-ref doc:name="ownershipCheckForProductId" doc:id="64ade822-f8f2-4868-b892-585fc4a0c2ae" name="ownershipCheckForProductId" />
+        <http:request method="PATCH" doc:name="PATCH/database/products/{productId}" doc:id="9ac8d2c7-ff4c-42af-a681-7708f1545536" config-ref="HTTP_Request_configuration" path="/products/{productId}">
+            <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"productId" : attributes.uriParams.productId
+}]]]></http:uri-params>
+        </http:request>
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1f03b4b0-a777-48c1-aaab-4ce740252c8f" type="APP:FORBIDDEN">
+                <set-variable value="403" doc:name="httpStatus 403" doc:id="fcab3e92-1f40-46f6-bdc5-c8043b1d15aa" variableName="httpStatus" />
+            </on-error-propagate>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="7283e4ea-71cf-4574-a034-d2e8270539c9" when="#[error.errorMessage.attributes.statusCode == 404]">
+                <set-variable value="404" doc:name="httpStatus 404" doc:id="1e80658a-7aaf-4f35-a61a-953ae5686cb2" variableName="httpStatus" />
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="patch:\products\(productId):application\json:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message='#["Request to update product received. ProductId:"++ attributes.uriParams.productId]' />
+		<flow-ref doc:name="ownershipCheckForProductId" doc:id="88453429-2b45-4f17-9da3-3f4c0b28971a" name="ownershipCheckForProductId"/>
+		<http:request method="PATCH" doc:name="PATCH/database/products/{productId}" doc:id="1219b8dc-9711-4f47-8e18-40a7f11a3ddd" config-ref="HTTP_Request_configuration" path="/products/{productId}">
 			<http:uri-params ><![CDATA[#[output application/java
 ---
 {
 	"productId" : attributes.uriParams.productId
 }]]]></http:uri-params>
 		</http:request>
-		<ee:transform doc:name="Transform Message" doc:id="72357aa6-b1f9-4a23-81fb-9f06357ada20" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-payload[0]]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="b871832e-1a4e-4f2b-af12-412b27b02bc9" type="APP:FORBIDDEN">
+				<set-variable value="403" doc:name="httStatus 403" doc:id="682b06f6-1a68-4a6a-9de7-0d1750db7825" variableName="httpStatus"/>
+			</on-error-propagate>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a68c00e5-f356-4b76-a056-9a786d02b3a7" when="#[error.errorMessage.attributes.statusCode == 404]">
+				<set-variable value="404" doc:name="httpStatus 404" doc:id="04538b76-b45e-4e90-bda0-3502aaae0a91" variableName="httpStatus"/>
+			</on-error-propagate>
+		</error-handler>
     </flow>
+    <sub-flow name="ownershipCheckForProductId" doc:id="b35da7be-823b-4fde-9006-d3a111a0599d">
+        <http:request method="GET" doc:name="GET/database/products/{productId}" doc:id="60aef216-7818-409a-8897-d327464cc2bc" config-ref="HTTP_Request_configuration" path="/products/{productId}" target="productDetails">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"productId" : attributes.uriParams.productId
+}]]]></http:uri-params>
+        </http:request>
+        <http:request method="GET" doc:name="GET/database/stores/{storeId}" doc:id="80ec6409-ea3b-4165-bd80-ab76740c8e72" config-ref="HTTP_Request_configuration" path="/stores/{storeId}" target="storeDetails">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"storeId" : (vars.productDetails[0]).storeId
+}]]]></http:uri-params>
+        </http:request>
+        <choice doc:name="Choice" doc:id="9a75d141-a8ab-40d0-9872-3ffe7735e405">
+            <when expression="#[(vars.storeDetails[0]).userId != attributes.headers.&quot;x-user-id&quot;]">
+                <raise-error doc:name="APP:FORBIDDEN" doc:id="c72a1f47-0bfc-42e6-b2a6-b404474e1101" type="APP:FORBIDDEN" />
+            </when>
+        </choice>
+    </sub-flow>
 </mule>
