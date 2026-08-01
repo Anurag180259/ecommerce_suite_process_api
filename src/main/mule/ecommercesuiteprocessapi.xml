@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
-http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
     <http:listener-config name="ecommercesuiteprocessapi-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8082" />
     </http:listener-config>
-    <apikit:config name="ecommercesuiteprocessapi-config" api="resource::297e1185-2a7e-4734-9d69-effb0bb9fbe9:ecommercesuiteprocessapi:1.0.8:raml:zip:ecommercesuiteprocessapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <apikit:config name="ecommercesuiteprocessapi-config" api="resource::297e1185-2a7e-4734-9d69-effb0bb9fbe9:ecommercesuiteprocessapi:1.0.9:raml:zip:ecommercesuiteprocessapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="a18d8e92-845e-4493-b76c-356748915a65" basePath="/database">
         <http:request-connection host="localhost" port="8083" />
     </http:request-config>
@@ -420,24 +419,24 @@ payload[0]]]></ee:set-payload>
         </error-handler>
     </flow>
     <flow name="delete:\products\(productId):ecommercesuiteprocessapi-config">
-        <logger level="INFO" message='#["Delete request received for ProductdId:" ++ attributes.uriParams.productId]' />
-		<flow-ref doc:name="ownershipCheckForProductId" doc:id="d32d2b37-f0e0-4ed3-86d5-69ddeebd3dae" name="ownershipCheckForProductId"/>
-		<http:request method="DELETE" doc:name="DELETE/database/products/{productId}" doc:id="5a9ba0b3-8335-4fac-899c-fbffaf7581fc" config-ref="HTTP_Request_configuration" path="/products/{productId}">
-			<http:body ><![CDATA[#[null]]]></http:body>
-			<http:uri-params ><![CDATA[#[output application/java
+        <logger level="INFO" message="#[&quot;Delete request received for ProductdId:&quot; ++ attributes.uriParams.productId]" />
+        <flow-ref doc:name="ownershipCheckForProductId" doc:id="d32d2b37-f0e0-4ed3-86d5-69ddeebd3dae" name="ownershipCheckForProductId" />
+        <http:request method="DELETE" doc:name="DELETE/database/products/{productId}" doc:id="5a9ba0b3-8335-4fac-899c-fbffaf7581fc" config-ref="HTTP_Request_configuration" path="/products/{productId}">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:uri-params><![CDATA[#[output application/java
 ---
 {
 	"productId" : attributes.uriParams.productId
 }]]]></http:uri-params>
-		</http:request>
-		<error-handler >
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="66b08a94-05d0-43b1-819e-c38ba3edb23b" type="APP:FORBIDDEN" >
-				<set-variable value="403" doc:name="httpStatus 403" doc:id="f72cd957-5f68-4d4f-b095-f3afc3f7bc37" variableName="httpStatus" />
-			</on-error-propagate>
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate1" doc:id="c20baf37-d690-47fe-b9e1-5b6fc252c3d8" when="#[error.errorMessage.attributes.statusCode == 404]" >
-				<set-variable value="404" doc:name="httpStatus 404" doc:id="c1dcc61f-9ac6-4fd2-979c-12467db3d291" variableName="httpStatus" />
-			</on-error-propagate>
-		</error-handler>
+        </http:request>
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="66b08a94-05d0-43b1-819e-c38ba3edb23b" type="APP:FORBIDDEN">
+                <set-variable value="403" doc:name="httpStatus 403" doc:id="f72cd957-5f68-4d4f-b095-f3afc3f7bc37" variableName="httpStatus" />
+            </on-error-propagate>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate1" doc:id="c20baf37-d690-47fe-b9e1-5b6fc252c3d8" when="#[error.errorMessage.attributes.statusCode == 404]">
+                <set-variable value="404" doc:name="httpStatus 404" doc:id="c1dcc61f-9ac6-4fd2-979c-12467db3d291" variableName="httpStatus" />
+            </on-error-propagate>
+        </error-handler>
     </flow>
     <flow name="patch:\products\(productId)\restock:application\json:ecommercesuiteprocessapi-config">
         <logger level="INFO" message="Processing restocking logic." />
@@ -459,23 +458,23 @@ payload[0]]]></ee:set-payload>
         </error-handler>
     </flow>
     <flow name="patch:\products\(productId):application\json:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message='#["Request to update product received. ProductId:"++ attributes.uriParams.productId]' />
-		<flow-ref doc:name="ownershipCheckForProductId" doc:id="88453429-2b45-4f17-9da3-3f4c0b28971a" name="ownershipCheckForProductId"/>
-		<http:request method="PATCH" doc:name="PATCH/database/products/{productId}" doc:id="1219b8dc-9711-4f47-8e18-40a7f11a3ddd" config-ref="HTTP_Request_configuration" path="/products/{productId}">
-			<http:uri-params ><![CDATA[#[output application/java
+        <logger level="INFO" message="#[&quot;Request to update product received. ProductId:&quot;++ attributes.uriParams.productId]" />
+        <flow-ref doc:name="ownershipCheckForProductId" doc:id="88453429-2b45-4f17-9da3-3f4c0b28971a" name="ownershipCheckForProductId" />
+        <http:request method="PATCH" doc:name="PATCH/database/products/{productId}" doc:id="1219b8dc-9711-4f47-8e18-40a7f11a3ddd" config-ref="HTTP_Request_configuration" path="/products/{productId}">
+            <http:uri-params><![CDATA[#[output application/java
 ---
 {
 	"productId" : attributes.uriParams.productId
 }]]]></http:uri-params>
-		</http:request>
-		<error-handler >
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="b871832e-1a4e-4f2b-af12-412b27b02bc9" type="APP:FORBIDDEN">
-				<set-variable value="403" doc:name="httStatus 403" doc:id="682b06f6-1a68-4a6a-9de7-0d1750db7825" variableName="httpStatus"/>
-			</on-error-propagate>
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a68c00e5-f356-4b76-a056-9a786d02b3a7" when="#[error.errorMessage.attributes.statusCode == 404]">
-				<set-variable value="404" doc:name="httpStatus 404" doc:id="04538b76-b45e-4e90-bda0-3502aaae0a91" variableName="httpStatus"/>
-			</on-error-propagate>
-		</error-handler>
+        </http:request>
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="b871832e-1a4e-4f2b-af12-412b27b02bc9" type="APP:FORBIDDEN">
+                <set-variable value="403" doc:name="httStatus 403" doc:id="682b06f6-1a68-4a6a-9de7-0d1750db7825" variableName="httpStatus" />
+            </on-error-propagate>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a68c00e5-f356-4b76-a056-9a786d02b3a7" when="#[error.errorMessage.attributes.statusCode == 404]">
+                <set-variable value="404" doc:name="httpStatus 404" doc:id="04538b76-b45e-4e90-bda0-3502aaae0a91" variableName="httpStatus" />
+            </on-error-propagate>
+        </error-handler>
     </flow>
     <sub-flow name="ownershipCheckForProductId" doc:id="b35da7be-823b-4fde-9006-d3a111a0599d">
         <http:request method="GET" doc:name="GET/database/products/{productId}" doc:id="60aef216-7818-409a-8897-d327464cc2bc" config-ref="HTTP_Request_configuration" path="/products/{productId}" target="productDetails">
@@ -500,4 +499,150 @@ payload[0]]]></ee:set-payload>
             </when>
         </choice>
     </sub-flow>
+    <flow name="delete:\carts:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message="delete:\carts:ecommercesuiteprocessapi-config" />
+    </flow>
+    <flow name="patch:\carts\(cartItemId)\quantity:application\json:ecommercesuiteprocessapi-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="cartItemId">attributes.uriParams.'cartItemId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" message='#["Processing quantity update for cartItemId:" ++ attributes.uriParams.cartItemId]' />
+		<http:request method="GET" doc:name="GET/carts/{cartItemId}" doc:id="0b8c32d0-9c3c-40c8-b44f-4acc7685e50e" config-ref="HTTP_Request_configuration" path="/carts/{cartItemId}" target="cartItemDetails">
+			<http:body ><![CDATA[#[null]]]></http:body>
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"cartItemId" : attributes.uriParams.cartItemId
+}]]]></http:uri-params>
+		</http:request>
+		<choice doc:name="Choice" doc:id="d06ee5ba-e276-45b7-9843-27954e1f8c32" >
+			<when expression='#[attributes.headers."x-user-id" != vars.cartItemDetails[0].userId]'>
+				<raise-error doc:name="Raise error" doc:id="5f1667a3-d981-479c-ab0c-d841cba8828a" type="APP:FORBIDDEN"/>
+			</when>
+		</choice>
+		<http:request method="PATCH" doc:name="PATCH/database/carts/{cartItemId}" doc:id="975c32d5-c521-48d8-8da4-a13f47ddb155" config-ref="HTTP_Request_configuration" path="/carts/{cartItemId}" outputMimeType="application/json">
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"cartItemId" : attributes.uriParams.cartItemId
+}]]]></http:uri-params>
+		</http:request>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1e5796a3-b6dd-46e2-91d6-3620e01c8d37" type="APP:FORBIDDEN">
+				<set-variable value="403" doc:name="httpStatus 403" doc:id="6b84fd6d-4aed-4757-bbd8-d9a59db95670" variableName="httpStatus"/>
+			</on-error-propagate>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ba307a6f-26b6-49c4-ba57-83ad529f907b" when="#[error.errorMessage.attributes.statusCode == 404]">
+				<set-variable value="404" doc:name="httpStatus 404" doc:id="6c18a6a9-c7c9-4a86-bc9a-45c755f5364b" variableName="httpStatus"/>
+			</on-error-propagate>
+		</error-handler>
+    </flow>
+    <flow name="get:\carts:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message='#["Processing request to get cart items"]' />
+		<http:request method="GET" doc:name="GET/database/carts" doc:id="ced34715-841c-4632-a863-3a1929ea0d7d" config-ref="HTTP_Request_configuration" path="/carts">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"userId" : attributes.headers."x-user-id"
+}]]]></http:query-params>
+		</http:request>
+		<set-variable value="#[[]]" doc:name="productDetails" doc:id="d3aade9a-aea1-4a21-9027-29761b832258" variableName="productDetails"/>
+		<foreach doc:name="For Each" doc:id="820a8543-f76b-479f-acba-edece19b5656" collection="#[payload]">
+			<http:request method="GET" doc:name="GET/products/{productId}" doc:id="2e3669f2-4830-4574-9349-a4f398198c8a" config-ref="HTTP_Request_configuration" path="/products/{productId}">
+				<http:body ><![CDATA[#[null]]]></http:body>
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"productId" : payload.productId
+}]]]></http:uri-params>
+			</http:request>
+			<set-variable value="#[vars.productDetails ++ payload]" doc:name="productDetails" doc:id="3e743304-f865-4ad6-9d61-61a18384ac5f" variableName="productDetails"/>
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="891e17b8-189a-494c-92e4-64f08cf789e6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	cart:payload,
+	productDetails:vars.productDetails
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+    <flow name="post:\carts:application\json:ecommercesuiteprocessapi-config">
+		<logger level="INFO" message='#["processing request for adding item into cart"]' />
+		<http:request method="GET" doc:name="GET/database/carts" doc:id="78824474-d99b-4e8d-9ad5-0f4d727c3aac" config-ref="HTTP_Request_configuration" path="/carts" target="cartItemCheck">
+			<http:body ><![CDATA[#[null]]]></http:body>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"productId" : payload.productId,
+	"userId" : attributes.headers."x-user-id"
+}]]]></http:query-params>
+		</http:request>
+		<choice doc:name="Choice" doc:id="49b706e2-9647-41d3-97fd-93afdec154f9" >
+			<when expression="#[!isEmpty(vars.cartItemCheck)]">
+				<ee:transform doc:name="Transform Message" doc:id="f7bcaefa-0956-4139-b615-c35dae4efff3">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	quantity:payload.quantity
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<http:request method="PATCH" doc:name="PATCH/database/carts/{cartItemId}" doc:id="064cdaea-61ea-490b-bb0c-021333426e1a" config-ref="HTTP_Request_configuration" path="/carts/{cartItemId}" target="temp">
+					<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"cartItemId" : vars.cartItemCheck[0].cartItemId
+}]]]></http:uri-params>
+				</http:request>
+				<ee:transform doc:name="Transform Message" doc:id="f551cdd4-8131-4081-b994-d4ab83d7d346" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	value:"updated",
+	cartItemId:vars.cartItemCheck.cartItemId
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<set-variable value='#["CT-" ++ uuid()[0 to 5]]' doc:name="cartItemId" doc:id="8bc653fb-ebf5-4158-8f21-1c5908f3aa01" variableName="cartItemId"/>
+				<ee:transform doc:name="Transform Message" doc:id="a25491f6-d1bd-4231-8b33-bb9b37931700">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	cartItemId:vars.cartItemId,
+	productId:payload.productId,
+	quantity:payload.quantity,
+	userId:attributes.headers."x-user-id"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="3e687f08-9e6f-4916-826d-a99c8bb20f2f" message="#[{&#10;	beforePostDb:payload&#10;}]" />
+				<http:request method="POST" doc:name="POST/database/carts" doc:id="ab33db12-61ec-4051-885c-dfe321dd480c" config-ref="HTTP_Request_configuration" path="/carts" target="temp">
+				</http:request>
+				<ee:transform doc:name="Transform Message" doc:id="5dd3763f-92a9-4e4f-a69d-85ad7a088334" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	value:"created",
+	cartItemId:vars.cartItemId
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
 </mule>

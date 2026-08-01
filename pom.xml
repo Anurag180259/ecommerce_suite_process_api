@@ -62,17 +62,17 @@
 			<classifier>mule-plugin</classifier>
 		</dependency>
 		<dependency>
-			<groupId>297e1185-2a7e-4734-9d69-effb0bb9fbe9</groupId>
-			<artifactId>ecommercesuiteprocessapi</artifactId>
-			<version>1.0.8</version>
-			<classifier>raml</classifier>
-			<type>zip</type>
-		</dependency>
-		<dependency>
 			<groupId>org.mule.connectors</groupId>
 			<artifactId>mule-db-connector</artifactId>
 			<version>1.14.13</version>
 			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>297e1185-2a7e-4734-9d69-effb0bb9fbe9</groupId>
+			<artifactId>ecommercesuiteprocessapi</artifactId>
+			<version>1.0.9</version>
+			<classifier>raml</classifier>
+			<type>zip</type>
 		</dependency>
 	</dependencies>
 
