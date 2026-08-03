@@ -3,12 +3,16 @@
     <http:listener-config name="ecommercesuiteprocessapi-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8082" />
     </http:listener-config>
-    <apikit:config name="ecommercesuiteprocessapi-config" api="resource::297e1185-2a7e-4734-9d69-effb0bb9fbe9:ecommercesuiteprocessapi:1.0.9:raml:zip:ecommercesuiteprocessapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
-    <http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="a18d8e92-845e-4493-b76c-356748915a65" basePath="/database">
+    <apikit:config name="ecommercesuiteprocessapi-config" api="resource::297e1185-2a7e-4734-9d69-effb0bb9fbe9:ecommercesuiteprocessapi:1.0.11:raml:zip:ecommercesuiteprocessapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <http:request-config name="HTTP_Request_configuration_database" doc:name="HTTP Request configuration" doc:id="a18d8e92-845e-4493-b76c-356748915a65" basePath="/database">
         <http:request-connection host="localhost" port="8083" />
     </http:request-config>
     <configuration-properties doc:name="Configuration properties" doc:id="7fc00899-b1fa-41a3-9db3-a914a4bf129e" file="configuration.properties" />
-    <flow name="ecommercesuiteprocessapi-main">
+    <configuration doc:name="Configuration" doc:id="77f184da-9787-4603-a756-a3ba59825792" defaultErrorHandler-ref="global-error-handlerError_Handler" />
+    <http:request-config name="HTTP_Request_configuration_payment" doc:name="HTTP Request configuration" doc:id="4a6f11c2-5c5f-4089-a9ef-9ba47493c830" basePath="/payment" >
+		<http:request-connection host="localhost" port="8084" />
+	</http:request-config>
+	<flow name="ecommercesuiteprocessapi-main">
         <http:listener config-ref="ecommercesuiteprocessapi-httpListenerConfig" path="/process/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
                 <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
@@ -145,7 +149,7 @@ output application/json
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-        <http:request method="POST" doc:name="POST/database/stores" doc:id="6d32e31a-de87-4743-ada1-3e1ee36a019f" config-ref="HTTP_Request_configuration" path="/stores" target="postStoreResponse" />
+        <http:request method="POST" doc:name="POST/database/stores" doc:id="6d32e31a-de87-4743-ada1-3e1ee36a019f" config-ref="HTTP_Request_configuration_database" path="/stores" target="postStoreResponse" />
         <error-handler>
             <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="8e1fb2d5-2227-456f-a1f8-a130adeeefd4" when="#[error.errorMessage.attributes.statusCode == 409]">
                 <set-variable value="409" doc:name="httpStatus 409" doc:id="df129c9e-eba6-405d-bf56-2f1c261507bb" variableName="httpStatus" />
@@ -154,7 +158,7 @@ output application/json
     </flow>
     <flow name="post:\users-login:application\json:ecommercesuiteprocessapi-config">
         <logger level="INFO" message="POST/auth/login called process api. continuing login request" />
-        <http:request method="GET" doc:name="GET/users" doc:id="5f974c80-0377-4eca-9eca-b54fd9b56bdc" config-ref="HTTP_Request_configuration" path="/users" target="userData">
+        <http:request method="GET" doc:name="GET/users" doc:id="5f974c80-0377-4eca-9eca-b54fd9b56bdc" config-ref="HTTP_Request_configuration_database" path="/users" target="userData">
             <http:body><![CDATA[#[null]]]></http:body>
             <http:query-params><![CDATA[#[output application/java
 ---
@@ -222,7 +226,7 @@ output application/json
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-        <http:request method="POST" doc:name="POST /database/users" doc:id="38d212f8-6399-4c34-9156-112d1c390825" config-ref="HTTP_Request_configuration" path="/users" target="registrationReponse" />
+        <http:request method="POST" doc:name="POST /database/users" doc:id="38d212f8-6399-4c34-9156-112d1c390825" config-ref="HTTP_Request_configuration_database" path="/users" target="registrationReponse" />
         <ee:transform doc:name="JWT generation" doc:id="0ffb29de-2012-4b7a-a55d-f23b4ee212e3">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
@@ -259,7 +263,7 @@ output application/json
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-        <http:request method="PATCH" doc:name="PATCH/stores/{storeId}" doc:id="d6d100e9-9ae1-4a4b-b68c-f8cf3672c006" config-ref="HTTP_Request_configuration" path="/stores/{storeId}" target="temp">
+        <http:request method="PATCH" doc:name="PATCH/stores/{storeId}" doc:id="d6d100e9-9ae1-4a4b-b68c-f8cf3672c006" config-ref="HTTP_Request_configuration_database" path="/stores/{storeId}" target="temp">
             <http:uri-params><![CDATA[#[output application/java
 ---
 {
@@ -269,7 +273,7 @@ output application/json
     </flow>
     <flow name="post:\admin-setup:application\json:ecommercesuiteprocessapi-config">
         <logger level="INFO" message="POST/exp/admin/setup called process api. processing admin setup." />
-        <http:request method="GET" doc:name="GET/users/getByRole" doc:id="b21182e6-2663-4978-a0d7-2fa95a7955e7" config-ref="HTTP_Request_configuration" path="/users/getByRole" target="adminUsers">
+        <http:request method="GET" doc:name="GET/users/getByRole" doc:id="b21182e6-2663-4978-a0d7-2fa95a7955e7" config-ref="HTTP_Request_configuration_database" path="/users/getByRole" target="adminUsers">
             <http:body><![CDATA[#[null]]]></http:body>
             <http:query-params><![CDATA[#[output application/java
 ---
@@ -301,16 +305,16 @@ output application/json
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-        <http:request method="POST" doc:name="POST/database/users" doc:id="84960357-72b5-4dee-ad49-4015e92ed718" config-ref="HTTP_Request_configuration" path="/users" target="temp" />
+        <http:request method="POST" doc:name="POST/database/users" doc:id="84960357-72b5-4dee-ad49-4015e92ed718" config-ref="HTTP_Request_configuration_database" path="/users" target="temp" />
         <error-handler>
             <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="7aec29bb-9789-4f08-9b23-3b5e572a5eca" type="APP:ADMIN_ALREADY_REGISTERED">
-                <set-variable value="403" doc:name="httpStatus" doc:id="99989d3b-8fb5-4094-adff-dfc51f9115d0" variableName="httpStatus" />
+                <set-variable value="403" doc:name="httpStatus 403" doc:id="99989d3b-8fb5-4094-adff-dfc51f9115d0" variableName="httpStatus" />
             </on-error-propagate>
         </error-handler>
     </flow>
     <flow name="post:\stores\(storeId)\products:application\json:ecommercesuiteprocessapi-config">
         <logger level="INFO" message="Processing new product addition." doc:name="Logger" />
-        <http:request method="GET" doc:name="GET/stores/{storeId}" doc:id="60271e1d-0ccf-49db-b2aa-a7d312e13fbd" config-ref="HTTP_Request_configuration" path="/stores/{storeId}" target="storeData">
+        <http:request method="GET" doc:name="GET/stores/{storeId}" doc:id="60271e1d-0ccf-49db-b2aa-a7d312e13fbd" config-ref="HTTP_Request_configuration_database" path="/stores/{storeId}" target="storeData">
             <http:uri-params><![CDATA[#[output application/java
 ---
 {
@@ -345,7 +349,7 @@ output application/json
             </ee:message>
         </ee:transform>
         <logger level="INFO" doc:name="Before calling POST/products" doc:id="81471bca-4eea-429c-a3e2-71633e0bfa73" message="#[payload]" />
-        <http:request method="POST" doc:name="POST/products" doc:id="7333576f-8806-4e58-9058-687a7a82f668" config-ref="HTTP_Request_configuration" path="/products" />
+        <http:request method="POST" doc:name="POST/products" doc:id="7333576f-8806-4e58-9058-687a7a82f668" config-ref="HTTP_Request_configuration_database" path="/products" />
         <ee:transform doc:name="Transform Message" doc:id="c82196c4-2e3c-463b-bc4a-1cd2b5342cfb">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
@@ -367,7 +371,7 @@ output application/json
     </flow>
     <flow name="get:\products:ecommercesuiteprocessapi-config">
         <logger level="INFO" message="Getting list of products by filters" />
-        <http:request method="GET" doc:name="GET/products" doc:id="c73e806f-7109-40bb-950b-b47b61c28e8e" config-ref="HTTP_Request_configuration" path="/products">
+        <http:request method="GET" doc:name="GET/products" doc:id="c73e806f-7109-40bb-950b-b47b61c28e8e" config-ref="HTTP_Request_configuration_database" path="/products">
             <http:body><![CDATA[#[null]]]></http:body>
             <http:query-params><![CDATA[#[output application/java
 ---
@@ -385,7 +389,7 @@ output application/json
     </flow>
     <flow name="get:\stores\(storeId)\products:ecommercesuiteprocessapi-config">
         <logger level="INFO" message="Processing product data retrieval by storeId." />
-        <http:request method="GET" doc:name="GET/database/products" doc:id="de0e948c-1949-493f-a389-a03bc7bfb4c7" config-ref="HTTP_Request_configuration" path="/products">
+        <http:request method="GET" doc:name="GET/database/products" doc:id="de0e948c-1949-493f-a389-a03bc7bfb4c7" config-ref="HTTP_Request_configuration_database" path="/products">
             <http:body><![CDATA[#[null]]]></http:body>
             <http:query-params><![CDATA[#[output application/java
 ---
@@ -396,7 +400,7 @@ output application/json
     </flow>
     <flow name="get:\products\(productId):ecommercesuiteprocessapi-config">
         <logger level="INFO" message="Processing GET poducts by productId" />
-        <http:request method="GET" doc:name="GET/products/{productId}" doc:id="b574e4be-b68e-46a4-a5db-747f51b097aa" config-ref="HTTP_Request_configuration" path="/products/{productId}">
+        <http:request method="GET" doc:name="GET/products/{productId}" doc:id="b574e4be-b68e-46a4-a5db-747f51b097aa" config-ref="HTTP_Request_configuration_database" path="/products/{productId}">
             <http:body><![CDATA[#[null]]]></http:body>
             <http:uri-params><![CDATA[#[output application/java
 ---
@@ -421,7 +425,7 @@ payload[0]]]></ee:set-payload>
     <flow name="delete:\products\(productId):ecommercesuiteprocessapi-config">
         <logger level="INFO" message="#[&quot;Delete request received for ProductdId:&quot; ++ attributes.uriParams.productId]" />
         <flow-ref doc:name="ownershipCheckForProductId" doc:id="d32d2b37-f0e0-4ed3-86d5-69ddeebd3dae" name="ownershipCheckForProductId" />
-        <http:request method="DELETE" doc:name="DELETE/database/products/{productId}" doc:id="5a9ba0b3-8335-4fac-899c-fbffaf7581fc" config-ref="HTTP_Request_configuration" path="/products/{productId}">
+        <http:request method="DELETE" doc:name="DELETE/database/products/{productId}" doc:id="5a9ba0b3-8335-4fac-899c-fbffaf7581fc" config-ref="HTTP_Request_configuration_database" path="/products/{productId}">
             <http:body><![CDATA[#[null]]]></http:body>
             <http:uri-params><![CDATA[#[output application/java
 ---
@@ -441,7 +445,7 @@ payload[0]]]></ee:set-payload>
     <flow name="patch:\products\(productId)\restock:application\json:ecommercesuiteprocessapi-config">
         <logger level="INFO" message="Processing restocking logic." />
         <flow-ref doc:name="ownershipCheckForProductId" doc:id="64ade822-f8f2-4868-b892-585fc4a0c2ae" name="ownershipCheckForProductId" />
-        <http:request method="PATCH" doc:name="PATCH/database/products/{productId}" doc:id="9ac8d2c7-ff4c-42af-a681-7708f1545536" config-ref="HTTP_Request_configuration" path="/products/{productId}">
+        <http:request method="PATCH" doc:name="PATCH/database/products/{productId}" doc:id="9ac8d2c7-ff4c-42af-a681-7708f1545536" config-ref="HTTP_Request_configuration_database" path="/products/{productId}">
             <http:uri-params><![CDATA[#[output application/java
 ---
 {
@@ -460,7 +464,7 @@ payload[0]]]></ee:set-payload>
     <flow name="patch:\products\(productId):application\json:ecommercesuiteprocessapi-config">
         <logger level="INFO" message="#[&quot;Request to update product received. ProductId:&quot;++ attributes.uriParams.productId]" />
         <flow-ref doc:name="ownershipCheckForProductId" doc:id="88453429-2b45-4f17-9da3-3f4c0b28971a" name="ownershipCheckForProductId" />
-        <http:request method="PATCH" doc:name="PATCH/database/products/{productId}" doc:id="1219b8dc-9711-4f47-8e18-40a7f11a3ddd" config-ref="HTTP_Request_configuration" path="/products/{productId}">
+        <http:request method="PATCH" doc:name="PATCH/database/products/{productId}" doc:id="1219b8dc-9711-4f47-8e18-40a7f11a3ddd" config-ref="HTTP_Request_configuration_database" path="/products/{productId}">
             <http:uri-params><![CDATA[#[output application/java
 ---
 {
@@ -477,7 +481,7 @@ payload[0]]]></ee:set-payload>
         </error-handler>
     </flow>
     <sub-flow name="ownershipCheckForProductId" doc:id="b35da7be-823b-4fde-9006-d3a111a0599d">
-        <http:request method="GET" doc:name="GET/database/products/{productId}" doc:id="60aef216-7818-409a-8897-d327464cc2bc" config-ref="HTTP_Request_configuration" path="/products/{productId}" target="productDetails">
+        <http:request method="GET" doc:name="GET/database/products/{productId}" doc:id="60aef216-7818-409a-8897-d327464cc2bc" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="productDetails">
             <http:body><![CDATA[#[null]]]></http:body>
             <http:uri-params><![CDATA[#[output application/java
 ---
@@ -485,7 +489,7 @@ payload[0]]]></ee:set-payload>
 	"productId" : attributes.uriParams.productId
 }]]]></http:uri-params>
         </http:request>
-        <http:request method="GET" doc:name="GET/database/stores/{storeId}" doc:id="80ec6409-ea3b-4165-bd80-ab76740c8e72" config-ref="HTTP_Request_configuration" path="/stores/{storeId}" target="storeDetails">
+        <http:request method="GET" doc:name="GET/database/stores/{storeId}" doc:id="80ec6409-ea3b-4165-bd80-ab76740c8e72" config-ref="HTTP_Request_configuration_database" path="/stores/{storeId}" target="storeDetails">
             <http:body><![CDATA[#[null]]]></http:body>
             <http:uri-params><![CDATA[#[output application/java
 ---
@@ -500,124 +504,115 @@ payload[0]]]></ee:set-payload>
         </choice>
     </sub-flow>
     <flow name="delete:\carts:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message="delete:\carts:ecommercesuiteprocessapi-config" />
-    </flow>
-    <flow name="patch:\carts\(cartItemId)\quantity:application\json:ecommercesuiteprocessapi-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:variables>
-                <ee:set-variable variableName="cartItemId">attributes.uriParams.'cartItemId'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <logger level="INFO" message='#["Processing quantity update for cartItemId:" ++ attributes.uriParams.cartItemId]' />
-		<http:request method="GET" doc:name="GET/carts/{cartItemId}" doc:id="0b8c32d0-9c3c-40c8-b44f-4acc7685e50e" config-ref="HTTP_Request_configuration" path="/carts/{cartItemId}" target="cartItemDetails">
-			<http:body ><![CDATA[#[null]]]></http:body>
-			<http:uri-params ><![CDATA[#[output application/java
----
-{
-	"cartItemId" : attributes.uriParams.cartItemId
-}]]]></http:uri-params>
-		</http:request>
-		<choice doc:name="Choice" doc:id="d06ee5ba-e276-45b7-9843-27954e1f8c32" >
-			<when expression='#[attributes.headers."x-user-id" != vars.cartItemDetails[0].userId]'>
-				<raise-error doc:name="Raise error" doc:id="5f1667a3-d981-479c-ab0c-d841cba8828a" type="APP:FORBIDDEN"/>
-			</when>
-		</choice>
-		<http:request method="PATCH" doc:name="PATCH/database/carts/{cartItemId}" doc:id="975c32d5-c521-48d8-8da4-a13f47ddb155" config-ref="HTTP_Request_configuration" path="/carts/{cartItemId}" outputMimeType="application/json">
-			<http:uri-params ><![CDATA[#[output application/java
----
-{
-	"cartItemId" : attributes.uriParams.cartItemId
-}]]]></http:uri-params>
-		</http:request>
-		<error-handler >
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1e5796a3-b6dd-46e2-91d6-3620e01c8d37" type="APP:FORBIDDEN">
-				<set-variable value="403" doc:name="httpStatus 403" doc:id="6b84fd6d-4aed-4757-bbd8-d9a59db95670" variableName="httpStatus"/>
-			</on-error-propagate>
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ba307a6f-26b6-49c4-ba57-83ad529f907b" when="#[error.errorMessage.attributes.statusCode == 404]">
-				<set-variable value="404" doc:name="httpStatus 404" doc:id="6c18a6a9-c7c9-4a86-bc9a-45c755f5364b" variableName="httpStatus"/>
-			</on-error-propagate>
-		</error-handler>
-    </flow>
-    <flow name="get:\carts:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message='#["Processing request to get cart items"]' />
-		<http:request method="GET" doc:name="GET/database/carts" doc:id="ced34715-841c-4632-a863-3a1929ea0d7d" config-ref="HTTP_Request_configuration" path="/carts">
-			<http:query-params ><![CDATA[#[output application/java
+        <logger level="INFO" message="#[&quot;Request received to delete the cart items for userId:&quot; ++ attributes.headers.&quot;x-user-id&quot;]" />
+        <http:request method="DELETE" doc:name="Delete/database/carts" doc:id="6b30b944-2d30-4aa0-99dd-d7e9c839af5f" config-ref="HTTP_Request_configuration_database" path="/carts">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
 ---
 {
 	"userId" : attributes.headers."x-user-id"
 }]]]></http:query-params>
-		</http:request>
-		<set-variable value="#[[]]" doc:name="productDetails" doc:id="d3aade9a-aea1-4a21-9027-29761b832258" variableName="productDetails"/>
-		<foreach doc:name="For Each" doc:id="820a8543-f76b-479f-acba-edece19b5656" collection="#[payload]">
-			<http:request method="GET" doc:name="GET/products/{productId}" doc:id="2e3669f2-4830-4574-9349-a4f398198c8a" config-ref="HTTP_Request_configuration" path="/products/{productId}">
-				<http:body ><![CDATA[#[null]]]></http:body>
-				<http:uri-params ><![CDATA[#[output application/java
+        </http:request>
+    </flow>
+    <flow name="patch:\carts\(cartItemId)\quantity:application\json:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message="#[&quot;Processing quantity update for cartItemId:&quot; ++ attributes.uriParams.cartItemId]" />
+        <flow-ref doc:name="ownershipCheckForCartItemId" doc:id="6216ab48-84c4-40f1-a42c-c8366abf8180" name="ownershipCheckForCartItemId" />
+        <http:request method="PATCH" doc:name="PATCH/database/carts/{cartItemId}" doc:id="975c32d5-c521-48d8-8da4-a13f47ddb155" config-ref="HTTP_Request_configuration_database" path="/carts/{cartItemId}" outputMimeType="application/json" target="patchOutput">
+            <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"cartItemId" : attributes.uriParams.cartItemId
+}]]]></http:uri-params>
+        </http:request>
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1e5796a3-b6dd-46e2-91d6-3620e01c8d37" type="APP:FORBIDDEN">
+                <set-variable value="403" doc:name="httpStatus 403" doc:id="6b84fd6d-4aed-4757-bbd8-d9a59db95670" variableName="httpStatus" />
+            </on-error-propagate>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ba307a6f-26b6-49c4-ba57-83ad529f907b" when="#[error.errorMessage.attributes.statusCode == 404]">
+                <set-variable value="404" doc:name="httpStatus 404" doc:id="6c18a6a9-c7c9-4a86-bc9a-45c755f5364b" variableName="httpStatus" />
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\carts:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message="#[&quot;Processing request to get cart items&quot;]" />
+        <http:request method="GET" doc:name="GET/database/carts" doc:id="ced34715-841c-4632-a863-3a1929ea0d7d" config-ref="HTTP_Request_configuration_database" path="/carts">
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"userId" : attributes.headers."x-user-id"
+}]]]></http:query-params>
+        </http:request>
+        <set-variable value="#[[]]" doc:name="productDetails" doc:id="d3aade9a-aea1-4a21-9027-29761b832258" variableName="productDetails" />
+        <foreach doc:name="For Each" doc:id="820a8543-f76b-479f-acba-edece19b5656" collection="#[payload]">
+            <http:request method="GET" doc:name="GET/products/{productId}" doc:id="2e3669f2-4830-4574-9349-a4f398198c8a" config-ref="HTTP_Request_configuration_database" path="/products/{productId}">
+                <http:body><![CDATA[#[null]]]></http:body>
+                <http:uri-params><![CDATA[#[output application/java
 ---
 {
 	"productId" : payload.productId
 }]]]></http:uri-params>
-			</http:request>
-			<set-variable value="#[vars.productDetails ++ payload]" doc:name="productDetails" doc:id="3e743304-f865-4ad6-9d61-61a18384ac5f" variableName="productDetails"/>
-		</foreach>
-		<ee:transform doc:name="Transform Message" doc:id="891e17b8-189a-494c-92e4-64f08cf789e6" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+            </http:request>
+            <set-variable value="#[vars.productDetails ++ payload]" doc:name="productDetails" doc:id="3e743304-f865-4ad6-9d61-61a18384ac5f" variableName="productDetails" />
+        </foreach>
+        <ee:transform doc:name="Transform Message" doc:id="891e17b8-189a-494c-92e4-64f08cf789e6">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
 	cart:payload,
 	productDetails:vars.productDetails
 }]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
+            </ee:message>
+        </ee:transform>
     </flow>
     <flow name="post:\carts:application\json:ecommercesuiteprocessapi-config">
-		<logger level="INFO" message='#["processing request for adding item into cart"]' />
-		<http:request method="GET" doc:name="GET/database/carts" doc:id="78824474-d99b-4e8d-9ad5-0f4d727c3aac" config-ref="HTTP_Request_configuration" path="/carts" target="cartItemCheck">
-			<http:body ><![CDATA[#[null]]]></http:body>
-			<http:query-params ><![CDATA[#[output application/java
+        <logger level="INFO" message="#[&quot;processing request for adding item into cart&quot;]" />
+        <http:request method="GET" doc:name="GET/database/carts" doc:id="78824474-d99b-4e8d-9ad5-0f4d727c3aac" config-ref="HTTP_Request_configuration_database" path="/carts" target="cartItemCheck">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
 ---
 {
 	"productId" : payload.productId,
 	"userId" : attributes.headers."x-user-id"
 }]]]></http:query-params>
-		</http:request>
-		<choice doc:name="Choice" doc:id="49b706e2-9647-41d3-97fd-93afdec154f9" >
-			<when expression="#[!isEmpty(vars.cartItemCheck)]">
-				<ee:transform doc:name="Transform Message" doc:id="f7bcaefa-0956-4139-b615-c35dae4efff3">
-					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
+        </http:request>
+        <choice doc:name="Choice" doc:id="49b706e2-9647-41d3-97fd-93afdec154f9">
+            <when expression="#[!isEmpty(vars.cartItemCheck)]">
+                <ee:transform doc:name="Transform Message" doc:id="f7bcaefa-0956-4139-b615-c35dae4efff3">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
 	quantity:payload.quantity
 }]]></ee:set-payload>
-					</ee:message>
-				</ee:transform>
-				<http:request method="PATCH" doc:name="PATCH/database/carts/{cartItemId}" doc:id="064cdaea-61ea-490b-bb0c-021333426e1a" config-ref="HTTP_Request_configuration" path="/carts/{cartItemId}" target="temp">
-					<http:uri-params ><![CDATA[#[output application/java
+                    </ee:message>
+                </ee:transform>
+                <http:request method="PATCH" doc:name="PATCH/database/carts/{cartItemId}" doc:id="064cdaea-61ea-490b-bb0c-021333426e1a" config-ref="HTTP_Request_configuration_database" path="/carts/{cartItemId}" target="temp">
+                    <http:uri-params><![CDATA[#[output application/java
 ---
 {
 	"cartItemId" : vars.cartItemCheck[0].cartItemId
 }]]]></http:uri-params>
-				</http:request>
-				<ee:transform doc:name="Transform Message" doc:id="f551cdd4-8131-4081-b994-d4ab83d7d346" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
+                </http:request>
+                <ee:transform doc:name="Transform Message" doc:id="f551cdd4-8131-4081-b994-d4ab83d7d346">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
 	value:"updated",
 	cartItemId:vars.cartItemCheck.cartItemId
 }]]></ee:set-payload>
-					</ee:message>
-				</ee:transform>
-			</when>
-			<otherwise >
-				<set-variable value='#["CT-" ++ uuid()[0 to 5]]' doc:name="cartItemId" doc:id="8bc653fb-ebf5-4158-8f21-1c5908f3aa01" variableName="cartItemId"/>
-				<ee:transform doc:name="Transform Message" doc:id="a25491f6-d1bd-4231-8b33-bb9b37931700">
-					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
+                    </ee:message>
+                </ee:transform>
+            </when>
+            <otherwise>
+                <set-variable value="#[&quot;CT-&quot; ++ uuid()[0 to 5]]" doc:name="cartItemId" doc:id="8bc653fb-ebf5-4158-8f21-1c5908f3aa01" variableName="cartItemId" />
+                <ee:transform doc:name="Transform Message" doc:id="a25491f6-d1bd-4231-8b33-bb9b37931700">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -626,23 +621,113 @@ output application/json
 	quantity:payload.quantity,
 	userId:attributes.headers."x-user-id"
 }]]></ee:set-payload>
-					</ee:message>
-				</ee:transform>
-				<logger level="INFO" doc:name="Logger" doc:id="3e687f08-9e6f-4916-826d-a99c8bb20f2f" message="#[{&#10;	beforePostDb:payload&#10;}]" />
-				<http:request method="POST" doc:name="POST/database/carts" doc:id="ab33db12-61ec-4051-885c-dfe321dd480c" config-ref="HTTP_Request_configuration" path="/carts" target="temp">
-				</http:request>
-				<ee:transform doc:name="Transform Message" doc:id="5dd3763f-92a9-4e4f-a69d-85ad7a088334" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
+                    </ee:message>
+                </ee:transform>
+                <logger level="INFO" doc:name="Logger" doc:id="3e687f08-9e6f-4916-826d-a99c8bb20f2f" message="#[{&#xA; beforePostDb:payload&#xA;}]" />
+                <http:request method="POST" doc:name="POST/database/carts" doc:id="ab33db12-61ec-4051-885c-dfe321dd480c" config-ref="HTTP_Request_configuration_database" path="/carts" target="temp" />
+                <ee:transform doc:name="Transform Message" doc:id="5dd3763f-92a9-4e4f-a69d-85ad7a088334">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
 	value:"created",
 	cartItemId:vars.cartItemId
 }]]></ee:set-payload>
-					</ee:message>
-				</ee:transform>
+                    </ee:message>
+                </ee:transform>
+            </otherwise>
+        </choice>
+    </flow>
+    <flow name="delete:\carts\(cartItemId):ecommercesuiteprocessapi-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="cartItemId">attributes.uriParams.'cartItemId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" message="delete:\carts\(cartItemId):ecommercesuiteprocessapi-config" />
+        <flow-ref doc:name="ownershipCheckForCartItemId" doc:id="79f6bfc5-d8e3-4b16-a73a-8a5e2642ea31" name="ownershipCheckForCartItemId" />
+        <http:request method="DELETE" doc:name="DELETE/carts" doc:id="b1a0ce0c-12ac-4e79-9848-e160d62727b3" config-ref="HTTP_Request_configuration_database" path="/carts">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"cartItemId" : attributes.uriParams.cartItemId
+}]]]></http:query-params>
+        </http:request>
+    </flow>
+    <sub-flow name="ownershipCheckForCartItemId" doc:id="4c4fd8e1-11a2-4607-938c-a3922ebee6a1">
+        <http:request method="GET" doc:name="GET/carts/{cartItemId}" doc:id="372f85f0-55dd-4f17-b7cb-48fb02f1e7ad" config-ref="HTTP_Request_configuration_database" path="/carts/{cartItemId}" target="cartItemDetails">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"cartItemId" : attributes.uriParams.cartItemId
+}]]]></http:uri-params>
+        </http:request>
+        <choice doc:name="Choice" doc:id="ede75d62-410a-46d4-bfea-e6aab847f863">
+            <when expression="#[attributes.headers.&quot;x-user-id&quot; != vars.cartItemDetails[0].userId]">
+                <raise-error doc:name="Raise error" doc:id="077df170-d8e6-4e4c-9a5c-557e2fb1d9b5" type="APP:FORBIDDEN" />
+            </when>
+        </choice>
+    </sub-flow>
+    <flow name="post:\orders:application\json:ecommercesuiteprocessapi-config">
+		<logger level="INFO" message='#["Processing order placement flow"]' />
+		<choice doc:name="Choice" doc:id="d1f80f67-a2d9-4952-a902-79f389ecfc80" >
+			<when expression="#[isEmpty(payload.product)]">
+				<http:request method="GET" doc:name="GET/database/carts" doc:id="beb53198-29bc-42d0-8193-0902f9a0a49b" config-ref="HTTP_Request_configuration_database" path="/carts" target="orderList">
+					<http:body ><![CDATA[#[null]]]></http:body>
+					<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"userId" : attributes.headers."x-user-id"
+}]]]></http:query-params>
+				</http:request>
+			</when>
+			<otherwise >
+				<set-variable value="#[[payload.product]]" doc:name="orderList" doc:id="dec95044-bf91-48e6-9de5-9110f6776b24" variableName="orderList"/>
 			</otherwise>
 		</choice>
+		<set-variable value="#[0]" doc:name="totalAmount" doc:id="bc41f451-0ca3-4fe9-b2fb-79e5e79b7027" variableName="totalAmount"/>
+		<foreach doc:name="For Each" doc:id="f2c0670e-ba96-4f3e-bff3-54b6b07d53d5" collection="#[vars.orderList]">
+			<http:request method="GET" doc:name="GET/products/{productId}" doc:id="5503e138-5eab-4007-a3ed-3fd5891002d1" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProductDetails">
+				<http:body ><![CDATA[#[null]]]></http:body>
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"productId" : payload.productId
+}]]]></http:uri-params>
+			</http:request>
+			<logger level="INFO" doc:name="Logger" doc:id="ba75da5b-0231-4554-911a-3fcc89c17dc4" message="#[{&#10;	cuurent:vars.currentProductDetails.quantity,&#10;	given:payload.quantity&#10;}]"/>
+			<choice doc:name="Choice" doc:id="30e44183-5815-4c99-bdf5-e2234addcd16" >
+				<when expression="#[vars.currentProductDetails[0].stock &lt; payload.quantity]">
+					<set-variable value="#[vars.currentProductDetails.productId]" doc:name="failedProductId" doc:id="8123cbbb-84aa-49dd-a1dd-a25e16c66a5a" variableName="failedProductId"/>
+					<raise-error doc:name="APP:NOT_IN_STOCK" doc:id="b3c75c7a-817a-4680-932e-94576ff3e052" type="APP:NOT_IN_STOCK"/>
+				</when>
+			</choice>
+		</foreach>
+		<http:request method="POST" doc:name="POST/payment/payment" doc:id="62e76c03-5730-4732-94e1-cc2fb6b1743c" config-ref="HTTP_Request_configuration_payment" path="/payment">
+			<http:body ><![CDATA[#[{
+	paymentToken:"mock_payment_token",
+	amount:vars.totalAmount
+}]]]></http:body>
+		</http:request>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="81618b61-c1cf-494f-a70c-e35bc4131c1a" type="APP:NOT_IN_STOCK">
+				<ee:transform doc:name="Transform Message" doc:id="9dbc9231-01cb-45c5-b452-09dd68956740" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	productId:vars.failedProductId
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[422]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
     </flow>
 </mule>

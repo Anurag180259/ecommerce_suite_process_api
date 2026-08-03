@@ -1,0 +1,23 @@
+%dw 2.0
+
+type auto_4c4fd8e1_11a2_4607_938c_a3922ebee6a1_Output_Attributes = {|
+  clientCertificate?: {|
+    publicKey?: {|  |}, 
+    "type"?: String, 
+    encoded?: Binary
+  |}, 
+  headers: {| "x-user-id": String |}, 
+  listenerPath: String, 
+  method: String, 
+  queryParams: {|  |}, 
+  queryString: String, 
+  relativePath: String, 
+  remoteAddress: String, 
+  requestPath: String, 
+  requestUri: String, 
+  scheme: String, 
+  uriParams: {| cartItemId: String |}, 
+  version: String, 
+  localAddress: String
+|}
+
