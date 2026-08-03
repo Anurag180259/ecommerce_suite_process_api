@@ -688,9 +688,9 @@ output application/json
 				<set-variable value="#[[payload.product]]" doc:name="orderList" doc:id="dec95044-bf91-48e6-9de5-9110f6776b24" variableName="orderList"/>
 			</otherwise>
 		</choice>
-		<set-variable value="#[0]" doc:name="totalAmount" doc:id="bc41f451-0ca3-4fe9-b2fb-79e5e79b7027" variableName="totalAmount"/>
+		<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;0]" doc:name="totalAmount" doc:id="bc41f451-0ca3-4fe9-b2fb-79e5e79b7027" variableName="totalAmount"/>
 		<foreach doc:name="For Each" doc:id="f2c0670e-ba96-4f3e-bff3-54b6b07d53d5" collection="#[vars.orderList]">
-			<http:request method="GET" doc:name="GET/products/{productId}" doc:id="5503e138-5eab-4007-a3ed-3fd5891002d1" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProductDetails">
+			<http:request method="GET" doc:name="GET/products/{productId}" doc:id="5503e138-5eab-4007-a3ed-3fd5891002d1" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProductDetails" outputMimeType="application/json">
 				<http:body ><![CDATA[#[null]]]></http:body>
 				<http:uri-params ><![CDATA[#[output application/java
 ---
@@ -698,20 +698,16 @@ output application/json
 	"productId" : payload.productId
 }]]]></http:uri-params>
 			</http:request>
-			<logger level="INFO" doc:name="Logger" doc:id="ba75da5b-0231-4554-911a-3fcc89c17dc4" message="#[{&#10;	cuurent:vars.currentProductDetails.quantity,&#10;	given:payload.quantity&#10;}]"/>
+			<logger level="INFO" doc:name="Logger" doc:id="ba75da5b-0231-4554-911a-3fcc89c17dc4" message="#[{&#10;	cuurent:vars.currentProductDetails.stock,&#10;	given:payload.quantity&#10;}]"/>
 			<choice doc:name="Choice" doc:id="30e44183-5815-4c99-bdf5-e2234addcd16" >
 				<when expression="#[vars.currentProductDetails[0].stock &lt; payload.quantity]">
 					<set-variable value="#[vars.currentProductDetails.productId]" doc:name="failedProductId" doc:id="8123cbbb-84aa-49dd-a1dd-a25e16c66a5a" variableName="failedProductId"/>
 					<raise-error doc:name="APP:NOT_IN_STOCK" doc:id="b3c75c7a-817a-4680-932e-94576ff3e052" type="APP:NOT_IN_STOCK"/>
 				</when>
 			</choice>
+			<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.totalAmount + vars.currentProductDetails[0].price*payload.quantity]" doc:name="totalAmount" doc:id="8af2fa50-abe8-4f23-82e4-9ed062cec890" variableName="totalAmount"/>
+			<logger level="INFO" doc:name="Logger" doc:id="07b4c0ca-eb2b-4b0b-86b9-e9d612466d55" message="#[{&#10;	totalAmount:vars.totalAmount&#10;}]"/>
 		</foreach>
-		<http:request method="POST" doc:name="POST/payment/payment" doc:id="62e76c03-5730-4732-94e1-cc2fb6b1743c" config-ref="HTTP_Request_configuration_payment" path="/payment">
-			<http:body ><![CDATA[#[{
-	paymentToken:"mock_payment_token",
-	amount:vars.totalAmount
-}]]]></http:body>
-		</http:request>
 		<error-handler >
 			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="81618b61-c1cf-494f-a70c-e35bc4131c1a" type="APP:NOT_IN_STOCK">
 				<ee:transform doc:name="Transform Message" doc:id="9dbc9231-01cb-45c5-b452-09dd68956740" >
