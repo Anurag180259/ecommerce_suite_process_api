@@ -1,0 +1,203 @@
+#%RAML 1.0 Library
+
+types:
+  postUsersRequestBody:
+    properties:
+      firstName:
+        type: string
+        required: true
+        pattern: ^[a-zA-z]+$
+      lastName:
+        type: string
+        required: true
+        pattern: ^[a-zA-Z]+$
+      email:
+        type: string
+        required: true
+        pattern: ^[\w.-]+@[\w.-]+\.\w+$
+      phoneNo:
+        type: string
+        required: false
+        pattern: ^[0-9]{10}$
+      city:
+        type: string
+        required: true
+      role:
+        type: string
+        required: true
+        enum: [seller, buyer]
+      password:
+        type: string
+        required: true
+  postUserLoginRequestBody:
+    properties:
+      email:
+        type: string
+        required: true
+        pattern: ^[\w.-]+@[\w.-]+\.\w+$
+      password:
+        type: string
+        required: true
+  postStoresRequestBody:
+    properties:
+      userId:
+        type: string
+        required: true
+        pattern: ^S-[0-9a-zA-Z]{6}$
+      storeName:
+        type: string
+        required: true
+      gstin:
+        type: string
+        required: true
+        pattern: ^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$
+      accountNumber:
+        type: string
+        required: true
+        pattern: ^[0-9]{9,18}$
+      accountHolderName:
+        type: string
+        required: true
+  postAdminSetupRequestBody:
+    properties:
+      firstName:
+        type: string
+        required: true
+        pattern: ^[a-zA-z]+$
+      lastName:
+        type: string
+        required: true
+        pattern: ^[a-zA-Z]+$
+      email:
+        type: string
+        required: true
+        pattern: ^[\w.-]+@[\w.-]+\.\w+$
+      phoneNo:
+        type: string
+        required: false
+        pattern: ^[0-9]{10}$
+      city:
+        type: string
+        required: true
+      password:
+        type: string
+        required: true
+  postProductRequestBody:
+    properties:
+      productName:
+        type: string
+        required: true
+      brand:
+        type: string
+        required: true
+      stock:
+        type: number
+        required: true
+      price:
+        type: number
+        required: true
+      category:
+        type: string
+        required: true
+      subCategory:
+        type: string
+        required: false
+      userId:
+        type: string
+        required: true
+      details:
+        type: string
+        required: true
+        maxLength: 255
+  patchProductRequestBody:
+    properties:
+      productName:
+        required: false
+        type: string
+      brand:
+        required: false
+        type: string
+      price:
+        required: false
+        type: number
+      category:
+        required: false
+        type: string
+      subCategory:
+        required: false
+        type: string
+      details:
+        required: false
+        type: string
+  postCartRequestBody:
+    properties:
+      productId:
+        required: true
+        type: string
+      quantity:
+        required: true
+        type: number
+        default: 1
+  postOrderRequestBody:
+    properties:
+      deliveryPincode:
+        type: string
+        required: true
+        pattern: ^[0-9]{6}$
+      product:
+        type: object
+        required: false
+        properties:
+          productId:
+            type: string
+            required: true
+            pattern: ^P-[0-9A-Fa-f]{6}$
+          quantity:
+            type: integer
+            required: true
+            minimum: 1
+            default: 1
+      
+
+traits:
+  getProductsByFilters:
+    queryParameters:
+      brand:
+        type: string
+        required: false
+      category:
+        type: string
+        required: false
+      subCategory:
+        type: string
+        required: false
+      maxPrice: 
+        type: number
+        required: false
+      minPrice: 
+        type: number
+        required: false
+      inStock:
+        type: boolean
+        required: false
+      minRatings:
+        type: number
+        required: false
+      storeName:
+        type: string
+        required: false
+  userIdHeader:
+    headers:
+      x-user-id:
+        type: string
+        required: true
+
+
+
+
+
+
+
+
+
+
