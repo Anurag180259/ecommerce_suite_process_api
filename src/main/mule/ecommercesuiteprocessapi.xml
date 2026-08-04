@@ -672,7 +672,14 @@ output application/json
         </choice>
     </sub-flow>
     <flow name="post:\orders:application\json:ecommercesuiteprocessapi-config">
+		<set-variable value="#[payload]" doc:name="initialPayload" doc:id="c258edf2-b3db-4eb8-ae13-7181e5884a8e" variableName="initialPayload"/>
 		<logger level="INFO" message='#["Processing order placement flow"]' />
+		<set-variable value='#[if(vars.initialPayload.deliveryPincode == "100001") "P4D"&#10;else if(vars.initialPayload.deliveryPincode == "100002") "P6D"&#10;else if(vars.initialPayload.deliveryPincode == "100003") "P7D"&#10;else "notDeliverable"]' doc:name="deliveryTime" doc:id="bc32dc7d-6494-4808-b024-79497033ed3e" variableName="deliveryTime"/>
+		<choice doc:name="Choice" doc:id="c29aa811-7775-491a-a0fe-45248244d54d" >
+			<when expression='#[vars.deliveryTime == "notDeliverable"]'>
+				<raise-error doc:name="APP:NOT_DELIVERABLE" doc:id="c07c63e0-6d28-4214-a937-e7711fd922b3" type="APP:NOT_DELIVERABLE"/>
+			</when>
+		</choice>
 		<choice doc:name="Choice" doc:id="d1f80f67-a2d9-4952-a902-79f389ecfc80" >
 			<when expression="#[isEmpty(payload.product)]">
 				<http:request method="GET" doc:name="GET/database/carts" doc:id="beb53198-29bc-42d0-8193-0902f9a0a49b" config-ref="HTTP_Request_configuration_database" path="/carts" target="orderList">
@@ -683,12 +690,19 @@ output application/json
 	"userId" : attributes.headers."x-user-id"
 }]]]></http:query-params>
 				</http:request>
+				<choice doc:name="Choice" doc:id="51ddd36c-87dc-45f8-879a-daf398114b9a" >
+					<when expression="#[isEmpty(vars.orderList)]">
+						<raise-error doc:name="APP:EMPTY_CART" doc:id="a04d8363-5960-44c6-a68b-a39f238733cf" type="APP:EMPTY_CART"/>
+					</when>
+				</choice>
+				<set-variable value="#[true]" doc:name="isCart" doc:id="6d950ad5-5eca-4532-b7c6-7129c1571083" variableName="isCart"/>
 			</when>
 			<otherwise >
 				<set-variable value="#[[payload.product]]" doc:name="orderList" doc:id="dec95044-bf91-48e6-9de5-9110f6776b24" variableName="orderList"/>
 			</otherwise>
 		</choice>
 		<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;0]" doc:name="totalAmount" doc:id="bc41f451-0ca3-4fe9-b2fb-79e5e79b7027" variableName="totalAmount"/>
+		<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;[]]" doc:name="productList" doc:id="ad0deb68-489c-4ac3-a2f1-1666930c2edc" variableName="productList"/>
 		<foreach doc:name="For Each" doc:id="f2c0670e-ba96-4f3e-bff3-54b6b07d53d5" collection="#[vars.orderList]">
 			<http:request method="GET" doc:name="GET/products/{productId}" doc:id="5503e138-5eab-4007-a3ed-3fd5891002d1" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProductDetails" outputMimeType="application/json">
 				<http:body ><![CDATA[#[null]]]></http:body>
@@ -706,8 +720,79 @@ output application/json
 				</when>
 			</choice>
 			<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.totalAmount + vars.currentProductDetails[0].price*payload.quantity]" doc:name="totalAmount" doc:id="8af2fa50-abe8-4f23-82e4-9ed062cec890" variableName="totalAmount"/>
+			<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.productList ++ [(vars.currentProductDetails[0] ++ {quantity:payload.quantity})]]" doc:name="productList" doc:id="fc6287f3-4839-4217-8c23-c8e92499d032" variableName="productList"/>
 			<logger level="INFO" doc:name="Logger" doc:id="07b4c0ca-eb2b-4b0b-86b9-e9d612466d55" message="#[{&#10;	totalAmount:vars.totalAmount&#10;}]"/>
 		</foreach>
+		<http:request method="POST" doc:name="POST/payment/payments" doc:id="322cc807-b583-4635-82c1-c8a0b6e4ed48" config-ref="HTTP_Request_configuration_payment" path="/payments" target="paymentResponse">
+				<http:body><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+	paymentToken:"mock_payment_token",
+	amount:vars.totalAmount
+}]]]></http:body>
+			</http:request>
+		<choice doc:name="Choice" doc:id="adb57f75-c419-4a84-8f3d-cc03ed0937ce">
+				<when expression='#[vars.paymentResponse.paymentStatus == "failure"]'>
+					<raise-error doc:name="APP:PAYMENT_FAILED" doc:id="9ec2071a-08a8-4655-bdd9-942c976c30f0" type="APP:PAYMENT_FAILED" />
+				</when>
+			</choice>
+		<set-variable value='#["OD-" ++ uuid()[0 to 5]]' doc:name="orderId" doc:id="6d8a0695-7d18-436f-ba70-72a793b7daae" variableName="orderId" />
+		<ee:transform doc:name="Transform Message" doc:id="17b742b6-3fa7-43a3-9112-21f4b8de82db">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	deliveryTime:vars.deliveryTime,
+	orderId:vars.orderId,
+	totalOrderValue:vars.totalAmount,
+	orderStatus:if(vars.paymentResponse.paymentStatus == "pending") "pending"
+				else "confirmed",
+	userId:attributes.headers."x-user-id",
+	transactionId:vars.paymentResponse.transactionId,
+	paymentStatus:vars.paymentResponse.paymentStatus,
+	deliveryPincode:vars.initialPayload.deliveryPincode,
+	isCart:vars.isCart default false,
+	listOfItems:vars.productList map{
+		orderItemId:"OI-" ++ uuid()[0 to 5],
+		productId:$.productId,
+		quantity:$.quantity,
+		orderId:vars.orderId,
+		priceAtPurchase:$.price
+	}
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="1a098015-0f59-445c-bd2a-91d5655f9061" message="#[{&#10;	beforePlaceOrder:payload&#10;}]"/>
+		<http:request method="POST" doc:name="POST/database/orders" doc:id="eaad0586-02be-4a0b-bea0-b6daf8479726" config-ref="HTTP_Request_configuration_database" path="/orders" target="temp"/>
+		<ee:transform doc:name="Transform Message1" doc:id="29e9f346-5ebf-4712-8b4d-69d7454ae206" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	deliveryTime:vars.deliveryTime,
+	orderId:vars.orderId,
+	totalOrderValue:vars.totalAmount,
+	orderStatus:if(vars.paymentResponse.paymentStatus == "pending") "pending"
+				else "confirmed",
+	userId:attributes.headers."x-user-id",
+	transactionId:vars.paymentResponse.transactionId,
+	paymentStatus:vars.paymentResponse.paymentStatus,
+	deliveryPincode:vars.initialPayload.deliveryPincode,
+	isCart:vars.isCart default false,
+	listOfItems:vars.productList map{
+		orderItemId:"OI-" ++ uuid()[0 to 5],
+		productId:$.productId,
+		quantity:$.quantity,
+		orderId:vars.orderId,
+		priceAtPurchase:$.price,
+		productName:$.productName
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
 		<error-handler >
 			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="81618b61-c1cf-494f-a70c-e35bc4131c1a" type="APP:NOT_IN_STOCK">
 				<ee:transform doc:name="Transform Message" doc:id="9dbc9231-01cb-45c5-b452-09dd68956740" >
@@ -716,7 +801,53 @@ output application/json
 output application/json
 ---
 {
+	reason:"notInStock",
 	productId:vars.failedProductId
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[422]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="2fc6be58-95ff-48fd-856b-a40d55b32f66" type="APP:PAYMENT_FAILED">
+				<ee:transform doc:name="Transform Message" doc:id="5269d380-210c-42b2-b117-41f96c643aa3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	reason:"paymentFailed"
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[422]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f6d353d5-316d-4467-b8ab-032719807969" type="APP:NOT_DELIVERABLE">
+				<ee:transform doc:name="Transform Message" doc:id="e2769afe-4d86-4259-a2ac-4f5b8b44aa2c" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	reason:"notDeliverable"
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[422]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e4888665-6b2f-48ac-abeb-c6202de4b593" type="APP:EMPTY_CART">
+				<ee:transform doc:name="Transform Message" doc:id="fe73f60a-f3d4-4a11-a258-5c94bdc0f707" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	reason:"cartIsEmpty"
 }]]></ee:set-payload>
 					</ee:message>
 					<ee:variables >

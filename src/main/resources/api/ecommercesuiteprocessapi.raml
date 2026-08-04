@@ -1,0 +1,105 @@
+#%RAML 1.0
+title: ecommerceSuiteProcessApi
+
+uses:
+  library: fragments/library.raml
+
+/users:
+  post:
+    body:
+      application/json:
+        library.postUsersRequestBody
+
+/users-login:
+    post:
+      body:
+        application/json:
+          library.postUserLoginRequestBody
+
+/stores:
+  post:
+    body:
+      application/json:
+        library.postStoresRequestBody
+  /{storeId}:
+    /products:
+      post:
+        body:
+          application/json:
+            library.postProductRequestBody
+      get:
+
+/products:
+  get:
+    is: [library.getProductsByFilters]
+  /{productId}:
+    get:   
+    patch:
+      body:
+        application/json:
+          library.patchProductRequestBody   
+      is: [library.userIdHeader]
+    delete:
+      is: [library.userIdHeader]
+    /restock:
+      patch:
+        body:
+          application/json:
+            properties:
+              quantity:
+                required: true
+                type: number
+                minimum: 1
+        is: [library.userIdHeader]
+
+/carts:
+  post:
+    is: [library.userIdHeader]
+    body:
+      application/json:
+        library.postCartRequestBody
+  get:
+    is: [library.userIdHeader]
+  delete:
+    is: [library.userIdHeader]
+  /{cartItemId}:
+    delete:
+      is: [library.userIdHeader]
+    /quantity:
+      patch:
+        is: [library.userIdHeader]
+        body:
+          application/json:
+            properties:
+              quantity:
+                required: true
+                type: number
+                minimum: 1
+
+
+/admin-setup:
+  post:
+    body:
+      application/json:
+        library.postAdminSetupRequestBody
+
+/store-verification:
+  /{storeId}:
+    patch:
+      body:
+        application/json:
+          properties:
+            status:
+              required: true
+              type: string
+              enum: [unverified, verified, rejected]
+
+/orders:
+  post:
+    is: [library.userIdHeader]
+    body:
+      application/json:
+        library.postOrderRequestBody
+
+
+        
