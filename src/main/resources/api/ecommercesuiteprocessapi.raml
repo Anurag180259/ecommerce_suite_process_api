@@ -1,16 +1,16 @@
 #%RAML 1.0
-title: ecommerceSuiteProcessApi
+title: ecommerceSuiteProcessApi2
 
 uses:
   library: fragments/library.raml
 
-/users:
-  post:
-    body:
-      application/json:
-        library.postUsersRequestBody
-
-/users-login:
+/auth:
+  /register:
+    post:
+      body:
+        application/json:
+          library.postUsersRequestBody
+  /login:
     post:
       body:
         application/json:
@@ -27,8 +27,18 @@ uses:
         body:
           application/json:
             library.postProductRequestBody
+        is: [library.userIdHeader]
       get:
-
+    /verification:
+      patch:
+        body:
+          application/json:
+            properties:
+              status:
+                required: true
+                type: string
+                enum: [unverified, verified, rejected]
+                
 /products:
   get:
     is: [library.getProductsByFilters]
@@ -77,22 +87,14 @@ uses:
                 minimum: 1
 
 
-/admin-setup:
-  post:
-    body:
-      application/json:
-        library.postAdminSetupRequestBody
-
-/store-verification:
-  /{storeId}:
-    patch:
+/admin:
+  /setup:
+    post:
       body:
         application/json:
-          properties:
-            status:
-              required: true
-              type: string
-              enum: [unverified, verified, rejected]
+          library.postAdminSetupRequestBody
+
+
 
 /orders:
   post:
@@ -100,6 +102,17 @@ uses:
     body:
       application/json:
         library.postOrderRequestBody
-
+  /seller:
+    get:
+      is: [library.userIdHeader]
+  /buyer:
+    get:
+      is: [library.userIdHeader]
+  /{orderId}:
+    get:
+      is: [library.userIdHeader]
+    /cancellation:
+      patch:
+        is: [library.userIdHeader]          
 
         
