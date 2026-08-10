@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
     <http:listener-config name="ecommercesuiteprocessapi-httpListenerConfig">
-        <http:listener-connection host="0.0.0.0" port="8082" />
+        <http:listener-connection host="0.0.0.0" port="${http.port}" />
     </http:listener-config>
-    <apikit:config name="ecommercesuiteprocessapi-config" api="resource::297e1185-2a7e-4734-9d69-effb0bb9fbe9:ecommercesuiteprocessapi:1.0.11:raml:zip:ecommercesuiteprocessapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <apikit:config name="ecommercesuiteprocessapi-config" api="ecommercesuiteprocessapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <http:request-config name="HTTP_Request_configuration_database" doc:name="HTTP Request configuration" doc:id="a18d8e92-845e-4493-b76c-356748915a65" basePath="/database">
-        <http:request-connection host="localhost" port="8083" />
+        <http:request-connection host="${http.database.host}" port="${http.database.port}" />
     </http:request-config>
     <configuration-properties doc:name="Configuration properties" doc:id="7fc00899-b1fa-41a3-9db3-a914a4bf129e" file="configuration.properties" />
     <configuration doc:name="Configuration" doc:id="77f184da-9787-4603-a756-a3ba59825792" defaultErrorHandler-ref="global-error-handlerError_Handler" />
-    <http:request-config name="HTTP_Request_configuration_payment" doc:name="HTTP Request configuration" doc:id="4a6f11c2-5c5f-4089-a9ef-9ba47493c830" basePath="/payment" >
-		<http:request-connection host="localhost" port="8084" />
-	</http:request-config>
-	<flow name="ecommercesuiteprocessapi-main">
+    <http:request-config name="HTTP_Request_configuration_payment" doc:name="HTTP Request configuration" doc:id="4a6f11c2-5c5f-4089-a9ef-9ba47493c830" basePath="/payment">
+        <http:request-connection host="${http.payment.host}" port="${http.payment.port}" />
+    </http:request-config>
+    <flow name="ecommercesuiteprocessapi-main">
         <http:listener config-ref="ecommercesuiteprocessapi-httpListenerConfig" path="/process/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
                 <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
@@ -131,8 +131,149 @@ output application/json
             </on-error-propagate>
         </error-handler>
     </flow>
+    <flow name="post:\auth\login:application\json:ecommercesuiteprocessapi-config">
+        <logger level="INFO" doc:name="Logger" doc:id="ddf478c3-dc22-4118-b9ac-5549c6c5a288" message="POST/auth/login called process api. continuing login request" />
+        <http:request method="GET" doc:name="GET/users" doc:id="4f90154b-c19e-4f22-9d4e-a64ffe881745" config-ref="HTTP_Request_configuration_database" path="/users" target="userData">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"email" : payload.email
+}]]]></http:query-params>
+        </http:request>
+        <choice doc:name="Choice" doc:id="28b78911-70e2-45c5-ba58-1d37498deaad">
+            <when expression="#[isEmpty(vars.userData)]">
+                <raise-error doc:name="APP:USER_NOT_FOUND" doc:id="045dfa51-5e08-4c93-8ade-e513499eb851" type="APP:USER_NOT_FOUND" />
+            </when>
+            <when expression="#[!((vars.userData[0]).pass==payload.password)]">
+                <raise-error doc:name="Raise error" doc:id="fbf1dc33-462f-48cd-b62d-d755eced893a" type="APP:PASSWORD_MISMATCH" />
+            </when>
+        </choice>
+        <ee:transform doc:name="JWT generation" doc:id="acd85f7b-5e48-4407-b16d-b1b04607662d">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+import * from jwt::HMAC
+output application/json
+---
+{
+	jwtToken:JWT(
+		{
+			userId:(vars.userData)[0].userId,
+			iss:"ecommerce_suite_backend",
+			aud:"ecommerce_api",
+			iat:now() as Number {unit:"seconds"},
+			exp:(now() + |PT3600S|) as Number {unit:"seconds"},
+			role:(vars.userData)[0].roles
+		},
+		p('jwt.secretKey')
+	),
+	userId:(vars.userData)[0].userId
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="bddb4bcd-5d6c-4a6e-9836-2890d418caf7" type="APP:USER_NOT_FOUND">
+                <set-variable value="404" doc:name="httpStatus 40" doc:id="6789546d-795a-44a0-94ec-cb257eded63f" variableName="httpStatus" />
+            </on-error-propagate>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate1" doc:id="fb3e59a6-5d00-4a29-8a96-7b015fdc3848" type="APP:PASSWORD_MISMATCH">
+                <set-variable value="401" doc:name="httpStatus 40" doc:id="34ea179b-d77f-4d41-9cbf-ec1fba11fb68" variableName="httpStatus" />
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="post:\auth\register:application\json:ecommercesuiteprocessapi-config">
+        <logger level="INFO" doc:name="Logger" doc:id="17ed1a5d-ef03-4391-a5f3-93a2a37e5e8c" message="/exp/auth/register called process api. processing registration request" />
+        <set-variable value="#[if(lower(payload.role==&quot;seller&quot;)) &quot;S-&quot; ++ uuid()[0 to 5] &#xA;else &quot;B-&quot; ++ uuid()[0 to 5]]" doc:name="Set Variable" doc:id="c17fc00a-6149-41f6-9de4-7b9632a57be2" variableName="userId" />
+        <ee:transform doc:name="Transform Message" doc:id="061ccb06-c19e-4e4b-8d5e-63b534c35298">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+import capitalize from dw::core::Strings
+output application/json
+---
+{
+	userId:vars.userId,
+	firstName:capitalize(payload.firstName),
+	lastName:capitalize(payload.lastName),
+	password:payload.password,
+	role:lower(payload.role),
+	city:lower(payload.city),
+	email:payload.email,
+	phoneNo:payload.phoneNo
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <http:request method="POST" doc:name="POST /database/users" doc:id="846147df-dcf7-4fa9-9285-7d153758fe48" config-ref="HTTP_Request_configuration_database" path="/users" target="registrationReponse" />
+        <ee:transform doc:name="JWT generation" doc:id="bef173bb-af7a-4fb1-807f-96be5c3b13bf">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+import * from jwt::HMAC
+output application/json
+---
+{
+	jwtToken:JWT(
+		{
+			userId:payload.userId,
+			iss:"ecommerce_suite_backend",
+			aud:"ecommerce_api",
+			iat:now() as Number {unit:"seconds"},
+			exp:(now() + |PT3600S|) as Number {unit:"seconds"},
+			role:payload.role,
+			
+		},
+		p('jwt.secretKey')
+	),
+	userId:payload.userId
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="916f749d-b703-4384-a9be-c7cb5bbd501c" when="#[error.errorMessage.attributes.statusCode == 409]">
+				<set-variable value="409" doc:name="httpStatus" doc:id="80bc0561-dfb2-4072-874e-8b4e9ed866f3" variableName="httpStatus"/>
+			</on-error-propagate>
+		</error-handler>
+    </flow>
+    <flow name="post:\admin\setup:application\json:ecommercesuiteprocessapi-config">
+        <logger level="INFO" doc:name="Logger" doc:id="b73c81f8-8559-4ce5-ad1b-c5d024ab8ef4" message="POST/exp/admin/setup called process api. processing admin setup." />
+        <http:request method="GET" doc:name="GET/users/getByRole" doc:id="139a2b53-afb3-4bc6-8913-c73f53352fea" config-ref="HTTP_Request_configuration_database" path="/users/getByRole" target="adminUsers">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"role" : "admin"
+}]]]></http:query-params>
+        </http:request>
+        <choice doc:name="Choice" doc:id="c25d2ac8-8212-4f2a-a08f-ef2c102c4e8a">
+            <when expression="#[!isEmpty(vars.adminUsers)]">
+                <raise-error doc:name="Raise error" doc:id="902d59cd-b88a-4cad-827b-b0b2903bc462" type="APP:ADMIN_ALREADY_REGISTERED" />
+            </when>
+        </choice>
+        <set-variable value="#[&quot;A-&quot; ++ uuid()[0 to 5]]" doc:name="userId" doc:id="7cda6641-5f47-409f-89ad-b08e322d46f4" variableName="userId" />
+        <set-variable value="#[&quot;admin&quot;]" doc:name="role" doc:id="74f16e68-2cf9-4616-9f29-9fcfec92ef59" variableName="role" />
+        <ee:transform doc:name="Transform Message" doc:id="e7d4a9cd-ffc8-4d77-9e1e-b8a63ca6b6b3">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	firstName:payload.firstName,
+	lastName:payload.lastName,
+	password:payload.password,
+	city:payload.city,
+	email:payload.email,
+	phoneNo:payload.phoneNo,
+	role:vars.role,
+	userId:vars.userId
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <http:request method="POST" doc:name="POST/database/users" doc:id="aa372883-bb66-482c-b448-81d0158dc469" config-ref="HTTP_Request_configuration_database" path="/users" target="temp" />
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="97a55010-b381-42cc-ac39-e4c54cdecfdb" type="APP:ADMIN_ALREADY_REGISTERED">
+                <set-variable value="403" doc:name="httpStatus 403" doc:id="f1a266b8-57a8-4696-9764-49a668eee65c" variableName="httpStatus" />
+            </on-error-propagate>
+        </error-handler>
+    </flow>
     <flow name="post:\stores:application\json:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message="POST/exp/stores called process api. Performing store creation process" />
+        <logger level="INFO" message="#[{&#xA; message:&quot;POST/exp/stores called process api. Performing store creation process&quot;&#xA;}]" />
         <set-variable value="#[&quot;ST-&quot;++ uuid()[0 to 5]]" doc:name="storeId" doc:id="b2194db4-953c-402b-bbaf-9b09cf34d424" variableName="storeId" />
         <ee:transform doc:name="Transform Message" doc:id="3f201338-9eab-4140-8b32-4f5b148f60bd">
             <ee:message>
@@ -156,104 +297,9 @@ output application/json
             </on-error-propagate>
         </error-handler>
     </flow>
-    <flow name="post:\users-login:application\json:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message="POST/auth/login called process api. continuing login request" />
-        <http:request method="GET" doc:name="GET/users" doc:id="5f974c80-0377-4eca-9eca-b54fd9b56bdc" config-ref="HTTP_Request_configuration_database" path="/users" target="userData">
-            <http:body><![CDATA[#[null]]]></http:body>
-            <http:query-params><![CDATA[#[output application/java
----
-{
-	"email" : payload.email
-}]]]></http:query-params>
-        </http:request>
-        <choice doc:name="Choice" doc:id="ca24e4b6-db7b-4dcc-97a8-fe79568ec207">
-            <when expression="#[isEmpty(vars.userData)]">
-                <raise-error doc:name="APP:USER_NOT_FOUND" doc:id="c05f2802-6d8d-4dbe-a63c-cdf712940938" type="APP:USER_NOT_FOUND" />
-            </when>
-            <when expression="#[!((vars.userData[0]).pass==payload.password)]">
-                <raise-error doc:name="Raise error" doc:id="b7240ddd-ca16-4972-946c-0ab1b6226243" type="APP:PASSWORD_MISMATCH" />
-            </when>
-        </choice>
-        <ee:transform doc:name="JWT generation" doc:id="c04853f1-9efb-474a-899a-779977813b33">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-import * from jwt::HMAC
-output application/json
----
-{
-	jwtToken:JWT(
-		{
-			userId:(vars.userData)[0].userId,
-			iss:"ecommerce_suite_backend",
-			aud:"ecommerce_api",
-			iat:now() as Number {unit:"seconds"},
-			exp:(now() + |PT3600S|) as Number {unit:"seconds"},
-			role:(vars.userData)[0].roles
-		},
-		p('jwt.secretKey')
-	),
-	userId:(vars.userData)[0].userId
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-        <error-handler>
-            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f0a9fefc-7ed1-405a-9ec6-034b04ea85d7" type="APP:USER_NOT_FOUND">
-                <set-variable value="404" doc:name="httpStatus 404" doc:id="4c4cd128-bf09-4c69-85cb-2c8aa52fee38" variableName="httpStatus" />
-            </on-error-propagate>
-            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ce87be89-9a56-441f-9aec-b1e753d264a6" type="APP:PASSWORD_MISMATCH">
-                <set-variable value="401" doc:name="httpStatus 401" doc:id="e0b6b116-c91c-4a27-925e-65627377b88a" variableName="httpStatus" />
-            </on-error-propagate>
-        </error-handler>
-    </flow>
-    <flow name="post:\users:application\json:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message="/exp/auth/register called process api. processing registration request" />
-        <set-variable value="#[if(lower(payload.role==&quot;seller&quot;)) &quot;S-&quot; ++ uuid()[0 to 5] &#xA;else &quot;B-&quot; ++ uuid()[0 to 5]]" doc:name="Set Variable" doc:id="589b47f1-4137-46da-ab59-37c09e147973" variableName="userId" />
-        <ee:transform doc:name="Transform Message" doc:id="a489a5eb-314e-4151-b871-06b94c340a53">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-import capitalize from dw::core::Strings
-output application/json
----
-{
-	userId:vars.userId,
-	firstName:capitalize(payload.firstName),
-	lastName:capitalize(payload.lastName),
-	password:payload.password,
-	role:lower(payload.role),
-	city:lower(payload.city),
-	email:payload.email,
-	phoneNo:payload.phoneNo
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-        <http:request method="POST" doc:name="POST /database/users" doc:id="38d212f8-6399-4c34-9156-112d1c390825" config-ref="HTTP_Request_configuration_database" path="/users" target="registrationReponse" />
-        <ee:transform doc:name="JWT generation" doc:id="0ffb29de-2012-4b7a-a55d-f23b4ee212e3">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-import * from jwt::HMAC
-output application/json
----
-{
-	jwtToken:JWT(
-		{
-			userId:payload.userId,
-			iss:"ecommerce_suite_backend",
-			aud:"ecommerce_api",
-			iat:now() as Number {unit:"seconds"},
-			exp:(now() + |PT3600S|) as Number {unit:"seconds"},
-			role:payload.role,
-			
-		},
-		p('jwt.secretKey')
-	),
-	userId:payload.userId
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-    </flow>
-    <flow name="patch:\store-verification\(storeId):application\json:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message="POST/store/{storeId}/verification called process api. Processing verification." />
-        <ee:transform doc:name="Transform Message" doc:id="81efa015-568d-4580-aa4b-21268bc0dbfe">
+    <flow name="patch:\stores\(storeId)\verification:application\json:ecommercesuiteprocessapi-config">
+        <logger level="INFO" doc:name="Logger" doc:id="f797543b-42e9-40f0-90ec-59a23c90541a" message="POST/store/{storeId}/verification called process api. Processing verification." />
+        <ee:transform doc:name="Transform Message" doc:id="84933868-f55d-4d51-bb0d-a827f188b175">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -263,7 +309,7 @@ output application/json
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-        <http:request method="PATCH" doc:name="PATCH/stores/{storeId}" doc:id="d6d100e9-9ae1-4a4b-b68c-f8cf3672c006" config-ref="HTTP_Request_configuration_database" path="/stores/{storeId}" target="temp">
+        <http:request method="PATCH" doc:name="PATCH/stores/{storeId}" doc:id="3a3cd326-eb7b-4840-88a0-a5c658c47194" config-ref="HTTP_Request_configuration_database" path="/stores/{storeId}" target="temp">
             <http:uri-params><![CDATA[#[output application/java
 ---
 {
@@ -271,49 +317,8 @@ output application/json
 }]]]></http:uri-params>
         </http:request>
     </flow>
-    <flow name="post:\admin-setup:application\json:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message="POST/exp/admin/setup called process api. processing admin setup." />
-        <http:request method="GET" doc:name="GET/users/getByRole" doc:id="b21182e6-2663-4978-a0d7-2fa95a7955e7" config-ref="HTTP_Request_configuration_database" path="/users/getByRole" target="adminUsers">
-            <http:body><![CDATA[#[null]]]></http:body>
-            <http:query-params><![CDATA[#[output application/java
----
-{
-	"role" : "admin"
-}]]]></http:query-params>
-        </http:request>
-        <choice doc:name="Choice" doc:id="0642f0f8-cb61-4c4e-a328-d8ee83e595bb">
-            <when expression="#[!isEmpty(vars.adminUsers)]">
-                <raise-error doc:name="Raise error" doc:id="426d3960-0a31-41b8-b78b-fcc22b5cb65d" type="APP:ADMIN_ALREADY_REGISTERED" />
-            </when>
-        </choice>
-        <set-variable value="#[&quot;A-&quot; ++ uuid()[0 to 5]]" doc:name="userId" doc:id="117f34ea-6845-4b5f-95d7-e7ddb2685788" variableName="userId" />
-        <set-variable value="#[&quot;admin&quot;]" doc:name="role" doc:id="91ec0a0a-a633-413e-8389-a3f230def492" variableName="role" />
-        <ee:transform doc:name="Transform Message" doc:id="5801b6bd-5108-4974-90c2-2ae6a2d62f0b">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-	firstName:payload.firstName,
-	lastName:payload.lastName,
-	password:payload.password,
-	city:payload.city,
-	email:payload.email,
-	phoneNo:payload.phoneNo,
-	role:vars.role,
-	userId:vars.userId
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-        <http:request method="POST" doc:name="POST/database/users" doc:id="84960357-72b5-4dee-ad49-4015e92ed718" config-ref="HTTP_Request_configuration_database" path="/users" target="temp" />
-        <error-handler>
-            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="7aec29bb-9789-4f08-9b23-3b5e572a5eca" type="APP:ADMIN_ALREADY_REGISTERED">
-                <set-variable value="403" doc:name="httpStatus 403" doc:id="99989d3b-8fb5-4094-adff-dfc51f9115d0" variableName="httpStatus" />
-            </on-error-propagate>
-        </error-handler>
-    </flow>
     <flow name="post:\stores\(storeId)\products:application\json:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message="Processing new product addition." doc:name="Logger" />
+        <logger level="INFO" message="#[{&#xA; message:&quot;Processing new product addition.&quot;&#xA;}]" doc:name="Logger" />
         <http:request method="GET" doc:name="GET/stores/{storeId}" doc:id="60271e1d-0ccf-49db-b2aa-a7d312e13fbd" config-ref="HTTP_Request_configuration_database" path="/stores/{storeId}" target="storeData">
             <http:uri-params><![CDATA[#[output application/java
 ---
@@ -322,7 +327,7 @@ output application/json
 }]]]></http:uri-params>
         </http:request>
         <choice doc:name="Choice" doc:id="795afc77-e97d-4465-9544-9346f9262838">
-            <when expression="#[((vars.storeData)[0]).userId != payload.userId]">
+            <when expression='#[((vars.storeData)[0]).userId != attributes.headers."x-user-id"]'>
                 <raise-error doc:name="APP:FORBIDDEN" doc:id="3cf559f0-d17d-4a9f-9088-0b1f76951859" type="APP:FORBIDDEN" />
             </when>
             <when expression="#[((vars.storeData)[0]).verificationStatus != &quot;verified&quot;]">
@@ -667,80 +672,80 @@ output application/json
         </http:request>
         <choice doc:name="Choice" doc:id="ede75d62-410a-46d4-bfea-e6aab847f863">
             <when expression="#[attributes.headers.&quot;x-user-id&quot; != vars.cartItemDetails[0].userId]">
-                <raise-error doc:name="Raise error" doc:id="077df170-d8e6-4e4c-9a5c-557e2fb1d9b5" type="APP:FORBIDDEN" />
+                <raise-error doc:name="APP:FORBIDDEN" doc:id="077df170-d8e6-4e4c-9a5c-557e2fb1d9b5" type="APP:FORBIDDEN" />
             </when>
         </choice>
     </sub-flow>
     <flow name="post:\orders:application\json:ecommercesuiteprocessapi-config">
-		<set-variable value="#[payload]" doc:name="initialPayload" doc:id="c258edf2-b3db-4eb8-ae13-7181e5884a8e" variableName="initialPayload"/>
-		<logger level="INFO" message='#["Processing order placement flow"]' />
-		<set-variable value='#[if(vars.initialPayload.deliveryPincode == "100001") "P4D"&#10;else if(vars.initialPayload.deliveryPincode == "100002") "P6D"&#10;else if(vars.initialPayload.deliveryPincode == "100003") "P7D"&#10;else "notDeliverable"]' doc:name="deliveryTime" doc:id="bc32dc7d-6494-4808-b024-79497033ed3e" variableName="deliveryTime"/>
-		<choice doc:name="Choice" doc:id="c29aa811-7775-491a-a0fe-45248244d54d" >
-			<when expression='#[vars.deliveryTime == "notDeliverable"]'>
-				<raise-error doc:name="APP:NOT_DELIVERABLE" doc:id="c07c63e0-6d28-4214-a937-e7711fd922b3" type="APP:NOT_DELIVERABLE"/>
-			</when>
-		</choice>
-		<choice doc:name="Choice" doc:id="d1f80f67-a2d9-4952-a902-79f389ecfc80" >
-			<when expression="#[isEmpty(payload.product)]">
-				<http:request method="GET" doc:name="GET/database/carts" doc:id="beb53198-29bc-42d0-8193-0902f9a0a49b" config-ref="HTTP_Request_configuration_database" path="/carts" target="orderList">
-					<http:body ><![CDATA[#[null]]]></http:body>
-					<http:query-params ><![CDATA[#[output application/java
+        <set-variable value="#[payload]" doc:name="initialPayload" doc:id="c258edf2-b3db-4eb8-ae13-7181e5884a8e" variableName="initialPayload" />
+        <logger level="INFO" message="#[&quot;Processing order placement flow&quot;]" />
+        <set-variable value="#[if(vars.initialPayload.deliveryPincode == &quot;100001&quot;) &quot;P4D&quot;&#xA;else if(vars.initialPayload.deliveryPincode == &quot;100002&quot;) &quot;P6D&quot;&#xA;else if(vars.initialPayload.deliveryPincode == &quot;100003&quot;) &quot;P7D&quot;&#xA;else &quot;notDeliverable&quot;]" doc:name="deliveryTime" doc:id="bc32dc7d-6494-4808-b024-79497033ed3e" variableName="deliveryTime" />
+        <choice doc:name="Choice" doc:id="c29aa811-7775-491a-a0fe-45248244d54d">
+            <when expression="#[vars.deliveryTime == &quot;notDeliverable&quot;]">
+                <raise-error doc:name="APP:NOT_DELIVERABLE" doc:id="c07c63e0-6d28-4214-a937-e7711fd922b3" type="APP:NOT_DELIVERABLE" />
+            </when>
+        </choice>
+        <choice doc:name="Choice" doc:id="d1f80f67-a2d9-4952-a902-79f389ecfc80">
+            <when expression="#[isEmpty(payload.product)]">
+                <http:request method="GET" doc:name="GET/database/carts" doc:id="beb53198-29bc-42d0-8193-0902f9a0a49b" config-ref="HTTP_Request_configuration_database" path="/carts" target="orderList">
+                    <http:body><![CDATA[#[null]]]></http:body>
+                    <http:query-params><![CDATA[#[output application/java
 ---
 {
 	"userId" : attributes.headers."x-user-id"
 }]]]></http:query-params>
-				</http:request>
-				<choice doc:name="Choice" doc:id="51ddd36c-87dc-45f8-879a-daf398114b9a" >
-					<when expression="#[isEmpty(vars.orderList)]">
-						<raise-error doc:name="APP:EMPTY_CART" doc:id="a04d8363-5960-44c6-a68b-a39f238733cf" type="APP:EMPTY_CART"/>
-					</when>
-				</choice>
-				<set-variable value="#[true]" doc:name="isCart" doc:id="6d950ad5-5eca-4532-b7c6-7129c1571083" variableName="isCart"/>
-			</when>
-			<otherwise >
-				<set-variable value="#[[payload.product]]" doc:name="orderList" doc:id="dec95044-bf91-48e6-9de5-9110f6776b24" variableName="orderList"/>
-			</otherwise>
-		</choice>
-		<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;0]" doc:name="totalAmount" doc:id="bc41f451-0ca3-4fe9-b2fb-79e5e79b7027" variableName="totalAmount"/>
-		<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;[]]" doc:name="productList" doc:id="ad0deb68-489c-4ac3-a2f1-1666930c2edc" variableName="productList"/>
-		<foreach doc:name="For Each" doc:id="f2c0670e-ba96-4f3e-bff3-54b6b07d53d5" collection="#[vars.orderList]">
-			<http:request method="GET" doc:name="GET/products/{productId}" doc:id="5503e138-5eab-4007-a3ed-3fd5891002d1" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProductDetails" outputMimeType="application/json">
-				<http:body ><![CDATA[#[null]]]></http:body>
-				<http:uri-params ><![CDATA[#[output application/java
+                </http:request>
+                <choice doc:name="Choice" doc:id="51ddd36c-87dc-45f8-879a-daf398114b9a">
+                    <when expression="#[isEmpty(vars.orderList)]">
+                        <raise-error doc:name="APP:EMPTY_CART" doc:id="a04d8363-5960-44c6-a68b-a39f238733cf" type="APP:EMPTY_CART" />
+                    </when>
+                </choice>
+                <set-variable value="#[true]" doc:name="isCart" doc:id="6d950ad5-5eca-4532-b7c6-7129c1571083" variableName="isCart" />
+            </when>
+            <otherwise>
+                <set-variable value="#[[payload.product]]" doc:name="orderList" doc:id="dec95044-bf91-48e6-9de5-9110f6776b24" variableName="orderList" />
+            </otherwise>
+        </choice>
+        <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;0]" doc:name="totalAmount" doc:id="bc41f451-0ca3-4fe9-b2fb-79e5e79b7027" variableName="totalAmount" />
+        <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;[]]" doc:name="productList" doc:id="ad0deb68-489c-4ac3-a2f1-1666930c2edc" variableName="productList" />
+        <foreach doc:name="For Each" doc:id="f2c0670e-ba96-4f3e-bff3-54b6b07d53d5" collection="#[vars.orderList]">
+            <http:request method="GET" doc:name="GET/products/{productId}" doc:id="5503e138-5eab-4007-a3ed-3fd5891002d1" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProductDetails" outputMimeType="application/json">
+                <http:body><![CDATA[#[null]]]></http:body>
+                <http:uri-params><![CDATA[#[output application/java
 ---
 {
 	"productId" : payload.productId
 }]]]></http:uri-params>
-			</http:request>
-			<logger level="INFO" doc:name="Logger" doc:id="ba75da5b-0231-4554-911a-3fcc89c17dc4" message="#[{&#10;	cuurent:vars.currentProductDetails.stock,&#10;	given:payload.quantity&#10;}]"/>
-			<choice doc:name="Choice" doc:id="30e44183-5815-4c99-bdf5-e2234addcd16" >
-				<when expression="#[vars.currentProductDetails[0].stock &lt; payload.quantity]">
-					<set-variable value="#[vars.currentProductDetails.productId]" doc:name="failedProductId" doc:id="8123cbbb-84aa-49dd-a1dd-a25e16c66a5a" variableName="failedProductId"/>
-					<raise-error doc:name="APP:NOT_IN_STOCK" doc:id="b3c75c7a-817a-4680-932e-94576ff3e052" type="APP:NOT_IN_STOCK"/>
-				</when>
-			</choice>
-			<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.totalAmount + vars.currentProductDetails[0].price*payload.quantity]" doc:name="totalAmount" doc:id="8af2fa50-abe8-4f23-82e4-9ed062cec890" variableName="totalAmount"/>
-			<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.productList ++ [(vars.currentProductDetails[0] ++ {quantity:payload.quantity})]]" doc:name="productList" doc:id="fc6287f3-4839-4217-8c23-c8e92499d032" variableName="productList"/>
-			<logger level="INFO" doc:name="Logger" doc:id="07b4c0ca-eb2b-4b0b-86b9-e9d612466d55" message="#[{&#10;	totalAmount:vars.totalAmount&#10;}]"/>
-		</foreach>
-		<http:request method="POST" doc:name="POST/payment/payments" doc:id="322cc807-b583-4635-82c1-c8a0b6e4ed48" config-ref="HTTP_Request_configuration_payment" path="/payments" target="paymentResponse">
-				<http:body><![CDATA[#[%dw 2.0
+            </http:request>
+            <logger level="INFO" doc:name="Logger" doc:id="ba75da5b-0231-4554-911a-3fcc89c17dc4" message="#[{&#xA; cuurent:vars.currentProductDetails.stock,&#xA; given:payload.quantity&#xA;}]" />
+            <choice doc:name="Choice" doc:id="30e44183-5815-4c99-bdf5-e2234addcd16">
+                <when expression="#[vars.currentProductDetails[0].stock &lt; payload.quantity]">
+                    <set-variable value="#[vars.currentProductDetails.productId]" doc:name="failedProductId" doc:id="8123cbbb-84aa-49dd-a1dd-a25e16c66a5a" variableName="failedProductId" />
+                    <raise-error doc:name="APP:NOT_IN_STOCK" doc:id="b3c75c7a-817a-4680-932e-94576ff3e052" type="APP:NOT_IN_STOCK" />
+                </when>
+            </choice>
+            <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;vars.totalAmount + vars.currentProductDetails[0].price*payload.quantity]" doc:name="totalAmount" doc:id="8af2fa50-abe8-4f23-82e4-9ed062cec890" variableName="totalAmount" />
+            <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;vars.productList ++ [(vars.currentProductDetails[0] ++ {quantity:payload.quantity})]]" doc:name="productList" doc:id="fc6287f3-4839-4217-8c23-c8e92499d032" variableName="productList" />
+            <logger level="INFO" doc:name="Logger" doc:id="07b4c0ca-eb2b-4b0b-86b9-e9d612466d55" message="#[{&#xA; totalAmount:vars.totalAmount&#xA;}]" />
+        </foreach>
+        <http:request method="POST" doc:name="POST/payment/payments" doc:id="322cc807-b583-4635-82c1-c8a0b6e4ed48" config-ref="HTTP_Request_configuration_payment" path="/payments" target="paymentResponse">
+            <http:body><![CDATA[#[%dw 2.0
 output application/json
 ---
 {
 	paymentToken:"mock_payment_token",
 	amount:vars.totalAmount
 }]]]></http:body>
-			</http:request>
-		<choice doc:name="Choice" doc:id="adb57f75-c419-4a84-8f3d-cc03ed0937ce">
-				<when expression='#[vars.paymentResponse.paymentStatus == "failure"]'>
-					<raise-error doc:name="APP:PAYMENT_FAILED" doc:id="9ec2071a-08a8-4655-bdd9-942c976c30f0" type="APP:PAYMENT_FAILED" />
-				</when>
-			</choice>
-		<set-variable value='#["OD-" ++ uuid()[0 to 5]]' doc:name="orderId" doc:id="6d8a0695-7d18-436f-ba70-72a793b7daae" variableName="orderId" />
-		<ee:transform doc:name="Transform Message" doc:id="17b742b6-3fa7-43a3-9112-21f4b8de82db">
-				<ee:message>
-					<ee:set-payload><![CDATA[%dw 2.0
+        </http:request>
+        <choice doc:name="Choice" doc:id="adb57f75-c419-4a84-8f3d-cc03ed0937ce">
+            <when expression="#[vars.paymentResponse.paymentStatus == &quot;failure&quot;]">
+                <raise-error doc:name="APP:PAYMENT_FAILED" doc:id="9ec2071a-08a8-4655-bdd9-942c976c30f0" type="APP:PAYMENT_FAILED" />
+            </when>
+        </choice>
+        <set-variable value="#[&quot;OD-&quot; ++ uuid()[0 to 5]]" doc:name="orderId" doc:id="6d8a0695-7d18-436f-ba70-72a793b7daae" variableName="orderId" />
+        <ee:transform doc:name="Transform Message" doc:id="17b742b6-3fa7-43a3-9112-21f4b8de82db">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -759,16 +764,17 @@ output application/json
 		productId:$.productId,
 		quantity:$.quantity,
 		orderId:vars.orderId,
-		priceAtPurchase:$.price
+		priceAtPurchase:$.price,
+		storeId:$.storeId
 	}
 }]]></ee:set-payload>
-				</ee:message>
-			</ee:transform>
-		<logger level="INFO" doc:name="Logger" doc:id="1a098015-0f59-445c-bd2a-91d5655f9061" message="#[{&#10;	beforePlaceOrder:payload&#10;}]"/>
-		<http:request method="POST" doc:name="POST/database/orders" doc:id="eaad0586-02be-4a0b-bea0-b6daf8479726" config-ref="HTTP_Request_configuration_database" path="/orders" target="temp"/>
-		<ee:transform doc:name="Transform Message1" doc:id="29e9f346-5ebf-4712-8b4d-69d7454ae206" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="Logger" doc:id="1a098015-0f59-445c-bd2a-91d5655f9061" message="#[{&#xA; beforePlaceOrder:payload&#xA;}]" />
+        <http:request method="POST" doc:name="POST/database/orders" doc:id="eaad0586-02be-4a0b-bea0-b6daf8479726" config-ref="HTTP_Request_configuration_database" path="/orders" target="temp" />
+        <ee:transform doc:name="Transform Message1" doc:id="29e9f346-5ebf-4712-8b4d-69d7454ae206">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -791,70 +797,265 @@ output application/json
 		productName:$.productName
 	}
 }]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-		<error-handler >
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="81618b61-c1cf-494f-a70c-e35bc4131c1a" type="APP:NOT_IN_STOCK">
-				<ee:transform doc:name="Transform Message" doc:id="9dbc9231-01cb-45c5-b452-09dd68956740" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
+            </ee:message>
+        </ee:transform>
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="81618b61-c1cf-494f-a70c-e35bc4131c1a" type="APP:NOT_IN_STOCK">
+                <ee:transform doc:name="Transform Message" doc:id="9dbc9231-01cb-45c5-b452-09dd68956740">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
 	reason:"notInStock",
-	productId:vars.failedProductId
+	productId:vars.failedProductId[0]
 }]]></ee:set-payload>
-					</ee:message>
-					<ee:variables >
-						<ee:set-variable variableName="httpStatus" ><![CDATA[422]]></ee:set-variable>
-					</ee:variables>
-				</ee:transform>
-			</on-error-propagate>
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="2fc6be58-95ff-48fd-856b-a40d55b32f66" type="APP:PAYMENT_FAILED">
-				<ee:transform doc:name="Transform Message" doc:id="5269d380-210c-42b2-b117-41f96c643aa3" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[422]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="2fc6be58-95ff-48fd-856b-a40d55b32f66" type="APP:PAYMENT_FAILED">
+                <ee:transform doc:name="Transform Message" doc:id="5269d380-210c-42b2-b117-41f96c643aa3">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
 	reason:"paymentFailed"
 }]]></ee:set-payload>
-					</ee:message>
-					<ee:variables >
-						<ee:set-variable variableName="httpStatus" ><![CDATA[422]]></ee:set-variable>
-					</ee:variables>
-				</ee:transform>
-			</on-error-propagate>
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f6d353d5-316d-4467-b8ab-032719807969" type="APP:NOT_DELIVERABLE">
-				<ee:transform doc:name="Transform Message" doc:id="e2769afe-4d86-4259-a2ac-4f5b8b44aa2c" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[422]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f6d353d5-316d-4467-b8ab-032719807969" type="APP:NOT_DELIVERABLE">
+                <ee:transform doc:name="Transform Message" doc:id="e2769afe-4d86-4259-a2ac-4f5b8b44aa2c">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
 	reason:"notDeliverable"
 }]]></ee:set-payload>
-					</ee:message>
-					<ee:variables >
-						<ee:set-variable variableName="httpStatus" ><![CDATA[422]]></ee:set-variable>
-					</ee:variables>
-				</ee:transform>
-			</on-error-propagate>
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e4888665-6b2f-48ac-abeb-c6202de4b593" type="APP:EMPTY_CART">
-				<ee:transform doc:name="Transform Message" doc:id="fe73f60a-f3d4-4a11-a258-5c94bdc0f707" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[422]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e4888665-6b2f-48ac-abeb-c6202de4b593" type="APP:EMPTY_CART">
+                <ee:transform doc:name="Transform Message" doc:id="fe73f60a-f3d4-4a11-a258-5c94bdc0f707">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
 	reason:"cartIsEmpty"
 }]]></ee:set-payload>
-					</ee:message>
-					<ee:variables >
-						<ee:set-variable variableName="httpStatus" ><![CDATA[422]]></ee:set-variable>
-					</ee:variables>
-				</ee:transform>
-			</on-error-propagate>
-		</error-handler>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[422]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f972e0ff-cc9a-4636-9123-5ba73df03ee6" when="#[error.errorMessage.attributes.statusCode == 404]">
+                <ee:transform doc:name="Transform Message" doc:id="9977ba20-6412-4cb0-95cb-e6a870cf7bfa">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	reason:"productNotFound"
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[404]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\orders\buyer:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message="#[&quot;Processing get orders by userId(buyer):&quot; ++ attributes.headers.&quot;x-user-id&quot;]" />
+        <http:request method="GET" doc:name="GET/database/orders?userId" doc:id="9266f8b3-203e-420e-b8e9-c016df56b29f" config-ref="HTTP_Request_configuration_database" path="/orders">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"userId" : attributes.headers."x-user-id"
+}]]]></http:query-params>
+        </http:request>
+        <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;[]]" doc:name="allOrders" doc:id="f574367b-9e8d-4202-9f83-9016d381dfd9" variableName="allOrders" />
+        <foreach doc:name="For Each" doc:id="f61e2aeb-156f-4711-ad33-9235e1f9377f" collection="#[payload]">
+            <http:request method="GET" doc:name="GET/orderItems/orderId" doc:id="8b650a0c-6716-4a7d-86ca-6e387015f06d" config-ref="HTTP_Request_configuration_database" path="/orderItems/orderId" target="currentOrderItems">
+                <http:body><![CDATA[#[null]]]></http:body>
+                <http:query-params><![CDATA[#[output application/java
+---
+{
+	"orderId" : payload.orderId
+}]]]></http:query-params>
+            </http:request>
+            <set-variable value="#[%dw 2.0&#xA;output applicaton/json&#xA;---&#xA;[]]" doc:name="allItems" doc:id="8c0f5793-f7fe-4227-9c56-24241fdacdb6" variableName="allItems" />
+            <foreach doc:name="For Each" doc:id="83a272d3-a7c7-4a46-a6a1-c1510a7434a1" collection="#[vars.currentOrderItems]">
+                <http:request method="GET" doc:name="GET/products/{productId}" doc:id="9c12f573-43df-4dd9-8485-d68933ffbd1d" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProduct">
+                    <http:body><![CDATA[#[null]]]></http:body>
+                    <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"productId" : payload.productId
+}]]]></http:uri-params>
+                </http:request>
+                <set-variable value="#[%dw 2.0&#xA;output applicaton/json&#xA;---&#xA;vars.allItems ++ [payload ++ {productName:vars.currentProduct[0].productName}]]" doc:name="allItems" doc:id="1b69f744-d4da-4cb9-8d3e-f26252b7ee5e" variableName="allItems" />
+            </foreach>
+            <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;vars.allOrders ++ [payload ++ {orderItems:vars.allItems}]]" doc:name="allOrders" doc:id="ec4f03e9-f323-4828-a209-5f7452b942fa" variableName="allOrders" />
+        </foreach>
+        <ee:transform doc:name="Transform Message" doc:id="3aba7b26-ef1d-428c-b695-676dde721c98">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.allOrders]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\orders\seller:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message="#[&quot;Processing get orders by userId(seller):&quot; ++ attributes.headers.&quot;x-user-id&quot;]" />
+        <http:request method="GET" doc:name="GET/database/stores?userId" doc:id="4771fdf0-8cdc-4cb6-a88f-91527c7c45a8" config-ref="HTTP_Request_configuration_database" path="/stores">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"userId" : attributes.headers."x-user-id"
+}]]]></http:query-params>
+        </http:request>
+        <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;[]]" doc:name="allStoreDetails" doc:id="e94f18bd-75e6-4f1c-be1c-e65833a4d11d" variableName="allStoreDetails" />
+        <foreach doc:name="For Each" doc:id="14221446-3f38-4271-ae0d-fafb2001404a" collection="#[payload]">
+            <http:request method="GET" doc:name="GET/database/orderItems/storeId" doc:id="d830137a-f2ee-445f-a3c2-b3bca906a73f" config-ref="HTTP_Request_configuration_database" path="/orderItems/storeId" target="currentOrderItems">
+                <http:body><![CDATA[#[null]]]></http:body>
+                <http:query-params><![CDATA[#[output application/java
+---
+{
+	"storeId" : payload.storeId
+}]]]></http:query-params>
+            </http:request>
+            <set-variable value="#[%dw 2.0&#xA;output applicaton/json&#xA;---&#xA;[]]" doc:name="allItems" doc:id="3eca6776-0971-4d6b-bb46-c7174211c92f" variableName="allItems" />
+            <foreach doc:name="For Each" doc:id="16f4b67a-4f0a-440b-8aec-ee42c70108be" collection="#[vars.currentOrderItems]">
+                <http:request method="GET" doc:name="GET/products/{productId}" doc:id="774a5666-7e53-431e-9838-60a3b03193eb" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProduct">
+                    <http:body><![CDATA[#[null]]]></http:body>
+                    <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"productId" : payload.productId
+}]]]></http:uri-params>
+                </http:request>
+                <set-variable value="#[%dw 2.0&#xA;output applicaton/json&#xA;---&#xA;vars.allItems ++ [payload ++ {productName:vars.currentProduct[0].productName}]]" doc:name="allItems" doc:id="d474aeb0-fe2c-461c-a8e5-9fb68a3559fc" variableName="allItems" />
+            </foreach>
+            <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;vars.allStoreDetails ++ [payload ++ {orderItems:vars.allItems}]]" doc:name="allStoreDetails" doc:id="6023f1b9-c3ec-436a-9203-6aa637071f2f" variableName="allStoreDetails" />
+        </foreach>
+        <ee:transform doc:name="Transform Message" doc:id="af7d814c-2c7c-4f15-b7b3-496a68f182d0">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.allStoreDetails]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="patch:\orders\(orderId)\cancellation:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message="#[&quot;Cancelling orderId:&quot; ++ attributes.uriParams.orderId]" />
+        <flow-ref doc:name="ownerShipCheckForOrderId" doc:id="0565824a-a967-403b-a0d1-9fb2591751d9" name="ownerShipCheckForOrderId" />
+        <http:request method="PATCH" doc:name="PATCH/payment/{transactionId}/reversePayment" doc:id="d3e91356-dd7d-45cd-8ab2-a185a178c46b" config-ref="HTTP_Request_configuration_payment" path="/{transactionId}/reversePayment">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"transactionId" : vars.orderDetails.transactionId
+}]]]></http:uri-params>
+        </http:request>
+        <http:request method="PATCH" doc:name="PATCH/orders/{orderId}/cancellation" doc:id="920b2c52-f79d-46d3-ad1f-0b5dac24dad7" config-ref="HTTP_Request_configuration_database" path="/orders/{orderId}/cancellation">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orderId" : vars.orderDetails[0].orderId
+}]]]></http:uri-params>
+        </http:request>
+    </flow>
+    <flow name="get:\orders\(orderId):ecommercesuiteprocessapi-config">
+        <logger level="INFO" message="#[&quot;Processing get order by orderId&quot;]" />
+        <flow-ref doc:name="ownerShipCheckForOrderId" doc:id="abb54a7c-d96e-461f-86d9-f7d848d2baaf" name="ownerShipCheckForOrderId" />
+        <http:request method="GET" doc:name="GET/orderItems/orderId" doc:id="c0431c93-7c13-4dc9-b6a9-c2ba8f9c3d35" config-ref="HTTP_Request_configuration_database" path="/orderItems/orderId" target="orderItems">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"orderId" : vars.orderDetails[0].orderId
+}]]]></http:query-params>
+        </http:request>
+        <ee:transform doc:name="Transform Message" doc:id="58a8656b-7334-478a-ae98-af98e0d7dded">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.orderDetails[0] ++ {orderItems:vars.orderItems}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="ownerShipCheckForOrderId" doc:id="12aed2fb-c429-49c8-bed0-251e13ee8f96">
+        <http:request method="GET" doc:name="GET/orders/{orderId}" doc:id="2baf2989-0806-47ef-8c1e-1deabcdc7cf4" config-ref="HTTP_Request_configuration_database" path="/orders/{orderId}" target="orderDetails">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orderId" : attributes.uriParams.orderId
+}]]]></http:uri-params>
+        </http:request>
+        <choice doc:name="Choice" doc:id="98dc9558-2287-4ded-883c-fe37fce48c73">
+            <when expression="#[attributes.headers.&quot;x-user-id&quot; != vars.orderDetails[0].userId]">
+                <raise-error doc:name="APP:FORBIDDEN" doc:id="f9874a39-cef6-4464-b54e-986ea4186b44" type="APP:FORBIDDEN" />
+            </when>
+        </choice>
+    </flow>
+    <flow name="updatePaymentStatusForPendingPayments" doc:id="475acc0a-67f4-46d6-81e5-a2b3d15dbb93">
+        <scheduler doc:name="Scheduler" doc:id="e68975d2-555f-42de-90fb-7b70b6d2453f">
+            <scheduling-strategy>
+                <fixed-frequency frequency="1" timeUnit="MINUTES" />
+            </scheduling-strategy>
+        </scheduler>
+        <logger level="INFO" doc:name="Logger" doc:id="7f3240dd-43f5-47a1-b195-3317402be626" message="#[&quot;Fetching orders with pending payments&quot;]" />
+        <http:request method="GET" doc:name="GET/database/orders/paymentStatus" doc:id="873d1aa2-21dd-48dc-89ff-7380b2a5b264" config-ref="HTTP_Request_configuration_database" path="/orders/paymentStatus">
+            <http:body><![CDATA[#[null]]]></http:body>
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"paymentStatus" : "pending"
+}]]]></http:query-params>
+        </http:request>
+        <foreach doc:name="For Each" doc:id="5ff9ab05-e9bc-4850-98fd-cf34e36340cc" collection="#[payload]">
+            <http:request method="GET" doc:name="GET/payments/{transactionId}/status" doc:id="a4d6382d-f928-493a-bdde-535afad13a9d" config-ref="HTTP_Request_configuration_payment" path="/payments/{transactionId}/status" target="paymentStatus">
+                <http:body><![CDATA[#[null]]]></http:body>
+                <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"transactionId" : payload.transactionId
+}]]]></http:uri-params>
+            </http:request>
+            <http:request method="PATCH" doc:name="PATCH/orders/{orderId}/paymentStatus" doc:id="a4b40055-8023-44b8-a188-a86cd045033d" config-ref="HTTP_Request_configuration_database" path="/orders/{orderId}/paymentStatus">
+                <http:body><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+	paymentStatus:vars.paymentStatus.paymentStatus
+}]]]></http:body>
+                <http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orderId" : payload.orderId
+}]]]></http:uri-params>
+            </http:request>
+        </foreach>
     </flow>
 </mule>
