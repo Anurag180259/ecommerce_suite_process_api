@@ -368,9 +368,11 @@ output application/json
         <error-handler>
             <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propogate" doc:id="2920b4f2-8fe4-436a-a80e-49a1917faca3" type="APP:FORBIDDEN">
                 <set-variable value="403" doc:name="httpStatus 403" doc:id="4ca15c8c-5298-4af8-bd76-7f981a4d4786" variableName="httpStatus" />
+				<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	reason:"notAllowed"&#10;}]' doc:name="Set Payload" doc:id="f978a741-94f2-4584-a6d0-999991ba6ee2" />
             </on-error-propagate>
             <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="c005797c-938a-40c1-9268-50b9720cf209" type="APP:UNVERIFIED">
-                <set-variable value="401" doc:name="httpStatus 401" doc:id="d95a1235-f998-4a79-a4da-f34266f15cee" variableName="httpStatus" />
+                <set-variable value="403" doc:name="httpStatus 403" doc:id="d95a1235-f998-4a79-a4da-f34266f15cee" variableName="httpStatus" />
+				<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	reason:"storeNotVerified"&#10;}]' doc:name="Set Payload" doc:id="12f9ead3-c275-4436-b45f-0df6ae2cf415" />
             </on-error-propagate>
         </error-handler>
     </flow>
