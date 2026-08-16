@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<munit:config name="ecommercesuiteprocessapi-test-suite.xml" />
+	<http:listener-config name="HTTP_Listener_config_munit" doc:name="HTTP Listener config" doc:id="d0cca278-8e3f-47a2-8d80-a3a0d1bf4ffc" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="1e9cb3f7-3278-417b-a260-3fa0606b9cf7" >
+		<http:request-connection host="localhost" port="8081" />
+	</http:request-config>
+	<munit:test name="post:\auth\login_userNotFound" doc:id="30189a20-b3b8-4f29-b12c-0eec28cbb33d" description="Test">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when" doc:id="c735ec96-32bd-4af0-8491-94b6616bb478" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="4f90154b-c19e-4f22-9d4e-a64ffe881745" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:variables >
+						<munit-tools:variable key="userData" value="#[[]]" />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Event" doc:id="5a762c91-fea3-40c4-b02a-df06c32338bd" >
+				<munit:payload value='#[{&#10;  "email": "anuragninawe@gmail.com",&#10;  "password": "anurag"&#10;}]' />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution>
+			<try doc:name="Try" doc:id="ed14651c-e9d6-4b5e-b280-604d8f48ec89" >
+				<flow-ref doc:name="Flow-ref to post:\auth\login:application\json:ecommercesuiteprocessapi-config" doc:id="9bcad402-8080-4ef6-b8bb-ea0aba8aefff" name="post:\auth\login:application\json:ecommercesuiteprocessapi-config" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="125b587b-fa51-4b20-bca6-c6b51835a3ef" />
+				</error-handler>
+			</try>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="4cffee86-1df3-4f73-b87a-9a5734e4ae2c" expression="#[vars.httpStatus as Number]" is="#[MunitTools::equalTo(404)]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="post:\auth\login_passwordMismatch" doc:id="069b0b90-98f7-46fb-8a45-a1532b05e828" description="Test">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when" doc:id="fb60ab91-b0f1-4339-8c03-506ac2682ce7" processor="http:request" >
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="4f90154b-c19e-4f22-9d4e-a64ffe881745" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:variables >
+						<munit-tools:variable key="userData" value='#[[{"email":"anuragninawe@gmail.com","pass":"anu"}]]' />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Event" doc:id="854992d3-ac69-41d4-914c-8140bbd5c037" >
+				<munit:payload value='#[{&#10;  "email": "anuragninawe@gmail.com",&#10;  "password": "anurag"&#10;}]' />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution>
+			<try doc:name="Try" doc:id="f2b400a7-b644-4aae-a4ab-5601bf343e7c" >
+				<flow-ref doc:name="Flow-ref to post:\auth\login:application\json:ecommercesuiteprocessapi-config" doc:id="f10a371c-ce95-4d2a-87c5-21cce4cdfda2" name="post:\auth\login:application\json:ecommercesuiteprocessapi-config" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="03b2efba-f9a6-482b-aa28-55bc1b0c67b5" />
+				</error-handler>
+			</try>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="b7a52675-1195-4884-96b9-6a6fa2c425c6" is="#[MunitTools::equalTo(401)]" expression="#[vars.httpStatus as Number]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="post:\auth\register_emailConflict" doc:id="74866a07-8aa3-403b-8f88-116bebde8d59" description="Test">
+		<munit:enable-flow-sources >
+			<munit:enable-flow-source value="raiseError_mainFlow" />
+		</munit:enable-flow-sources>
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="POST/database/users" doc:id="83514922-1a9a-4943-8316-05c4b36f286a" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="846147df-dcf7-4fa9-9285-7d153758fe48" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-call flow="raiseError_request" />
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Event" doc:id="6eff7d0c-a6a4-48bd-a750-fe245df0d04e" >
+				<munit:payload value='#[{&#10;  "firstName": "Anurag",&#10;  "lastName": "Ninave",&#10;  "email": "anuragninawe@gmail.com",&#10;  "phoneNo": "9404079128",&#10;  "city": "Nagpur",&#10;  "role": "seller",&#10;  "password": "anurag"&#10;}]' />
+				<munit:variables >
+					<munit:variable key="mockStatusCode" value="409" />
+				</munit:variables>
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution>
+			<try doc:name="Try" doc:id="60a1959e-4e42-40b0-a283-e4e2496a6ee9" >
+				<flow-ref doc:name="Flow-ref to post:\auth\register:application\json:ecommercesuiteprocessapi-config" doc:id="52885f3e-9125-4e20-9428-83324431234c" name="post:\auth\register:application\json:ecommercesuiteprocessapi-config" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="7a6627eb-951c-474c-9a2a-0679e1af0aba" />
+				</error-handler>
+			</try>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="httpStatus" doc:id="3e16a5bd-40fc-4c86-8973-689b2e8cebea" actual="#[vars.httpStatus as Number]" expected="#[409]"/>
+		</munit:validation>
+	</munit:test>
+	<flow name="raiseError_request" doc:id="cec8684a-660a-4fb9-8d52-3d8ea9f83e1f" >
+		<http:request method="GET" doc:name="Request" doc:id="c06fcd0b-feef-47e8-b36c-e68464d5480b" config-ref="HTTP_Request_configuration" path="/raise/error">
+			<http:body ><![CDATA[#[%dw 2.0
+output application/json
+---
+vars.mockPayload]]]></http:body>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"mockStatusCode" : vars.mockStatusCode
+}]]]></http:query-params>
+		</http:request>
+	</flow>
+	<flow name="raiseError_mainFlow" doc:id="0a88b9cf-01b2-41d3-bc0d-17830df219e0" >
+		<http:listener doc:name="Listener" doc:id="1cac5fa2-5ad9-4a0d-9b78-df2c4a28095e" config-ref="HTTP_Listener_config_munit" path="/raise/error">
+			<http:error-response statusCode="#[vars.httpStatus default 500]" />
+		</http:listener>
+		<raise-error doc:name="APP:MUNIT_HELPER" doc:id="70632dab-5b0e-4a75-876c-308903b182d4" type="APP:MUNIT_HELPER"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="18dd4a35-f225-4889-8fc3-535be231b61d" type="APP:MUNIT_HELPER">
+				<ee:transform doc:name="Transform Message" doc:id="919ecbcb-1db9-4101-9e57-28d588719091" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[attributes.queryParams.mockStatusCode]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<munit:test name="post:\admin\setup_adminAlreadyRegsitered" doc:id="f1acab99-4b63-4d27-a7f3-97fa32a6457c" description="Test">
+		<munit:enable-flow-sources >
+			<munit:enable-flow-source value="raiseError_mainFlow" />
+		</munit:enable-flow-sources>
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when" doc:id="373c11c7-ef6a-4dd7-8a67-31feb6d60ab8" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="139a2b53-afb3-4bc6-8913-c73f53352fea" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:variables >
+						<munit-tools:variable key="adminUsers" value='#[["Something"]]' />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution>
+			<try doc:name="Try" doc:id="25319760-aa69-473e-baf3-23db9fd49c5f" >
+				<flow-ref doc:name="Flow-ref to post:\admin\setup:application\json:ecommercesuiteprocessapi-config" doc:id="835fac15-b602-407d-83d9-7906bbc398b7" name="post:\admin\setup:application\json:ecommercesuiteprocessapi-config" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="5d3a41b2-5316-43fc-8ee2-0069a86eeb49" />
+				</error-handler>
+			</try>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="httpStatus" doc:id="f67df330-c96c-48ac-a1a5-b0c73d9fbadd" expression="#[vars.httpStatus as Number]" is="#[MunitTools::equalTo(403)]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="post:\stores_storeNameConflict" doc:id="ffda518f-03ed-4f9d-96c7-e421eeb8597e" description="Test">
+		<munit:enable-flow-sources >
+			<munit:enable-flow-source value="raiseError_mainFlow" />
+		</munit:enable-flow-sources>
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="POST/database/stores" doc:id="550f4c17-87c3-403c-a39a-3d063dc9ef39" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="6d32e31a-de87-4743-ada1-3e1ee36a019f" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-call flow="raiseError_request" />
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Event" doc:id="9b586a8d-eb81-4b2b-9114-7681d72f5127" >
+				<munit:variables >
+					<munit:variable key="mockStatusCode" value="409" />
+				</munit:variables>
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution>
+			<try doc:name="Try" doc:id="1df01780-ee39-4c2f-9cc0-cdaf844628c7" >
+				<flow-ref doc:name="Flow-ref to post:\stores:application\json:ecommercesuiteprocessapi-config" doc:id="517516ed-bf77-4e3e-8c35-c0497290f2e1" name="post:\stores:application\json:ecommercesuiteprocessapi-config" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="24c6bcab-5c59-4c5d-a76f-409cd3b7ee4c" />
+				</error-handler>
+			</try>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert doc:name="vars.httpStatus" doc:id="2cc16b41-3a5b-4e28-a258-79047eabd580" >
+				<munit-tools:that ><![CDATA[#[import * from dw::test::Asserts 
+ ---
+vars.httpStatus as Number must equalTo(409)]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>
