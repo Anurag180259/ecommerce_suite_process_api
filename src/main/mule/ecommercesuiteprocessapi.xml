@@ -146,7 +146,7 @@ output application/json
             <when expression="#[isEmpty(vars.userData)]">
                 <raise-error doc:name="APP:USER_NOT_FOUND" doc:id="045dfa51-5e08-4c93-8ade-e513499eb851" type="APP:USER_NOT_FOUND" />
             </when>
-            <when expression="#[!((vars.userData[0]).pass==payload.password)]">
+            <when expression="#[%dw 2.0&#10;output application/json&#10;import java!org::mindrot::jbcrypt::BCrypt&#10;---&#10;!BCrypt::checkpw(payload.password, vars.userData[0].pass)]">
                 <raise-error doc:name="APP:PASSWORD_MISMATCH" doc:id="fbf1dc33-462f-48cd-b62d-d755eced893a" type="APP:PASSWORD_MISMATCH" />
             </when>
         </choice>
@@ -188,13 +188,14 @@ output application/json
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 import capitalize from dw::core::Strings
+import java!org::mindrot::jbcrypt::BCrypt 
 output application/json
 ---
 {
 	userId:vars.userId,
 	firstName:capitalize(payload.firstName),
 	lastName:capitalize(payload.lastName),
-	password:payload.password,
+	password:BCrypt::hashpw(payload.password, BCrypt::gensalt(12)),
 	role:lower(payload.role),
 	city:lower(payload.city),
 	email:payload.email,
