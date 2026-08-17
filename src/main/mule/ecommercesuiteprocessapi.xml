@@ -493,7 +493,7 @@ payload[0]]]></ee:set-payload>
 }]]]></http:query-params>
         </http:request>
     </flow>
-    <flow name="patch:\carts\(cartItemId)\quantity:application\json:ecommercesuiteprocessapi-config">
+    <flow name="patch:\carts\(cartItemId)\quantity:application\json:ecommercesuiteprocessapi-config" doc:id="14142777-8a9b-4ae9-8437-911f646fb75c">
         <logger level="INFO" message="#[&quot;Processing quantity update for cartItemId:&quot; ++ attributes.uriParams.cartItemId]" />
         <flow-ref doc:name="ownershipCheckForCartItemId" doc:id="6216ab48-84c4-40f1-a42c-c8366abf8180" name="ownershipCheckForCartItemId" />
         <http:request method="PATCH" doc:name="PATCH/database/carts/{cartItemId}" doc:id="975c32d5-c521-48d8-8da4-a13f47ddb155" config-ref="HTTP_Request_configuration_database" path="/carts/{cartItemId}" outputMimeType="application/json" target="patchOutput">
