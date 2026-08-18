@@ -38,6 +38,12 @@ uses:
                 required: true
                 type: string
                 enum: [unverified, verified, rejected]
+  /seller:
+    get:
+      is: [library.userIdHeader]
+  /admin:
+    get:
+      is: [library.getStoresByVerificationStatus]
                 
 /products:
   get:
