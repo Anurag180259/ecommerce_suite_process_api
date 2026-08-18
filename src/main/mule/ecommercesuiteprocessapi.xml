@@ -253,12 +253,13 @@ output application/json
         <ee:transform doc:name="Transform Message" doc:id="e7d4a9cd-ffc8-4d77-9e1e-b8a63ca6b6b3">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
+import java!org::mindrot::jbcrypt::BCrypt
 output application/json
 ---
 {
 	firstName:payload.firstName,
 	lastName:payload.lastName,
-	password:payload.password,
+	password:BCrypt::hashpw(payload.password, BCrypt::gensalt(12)),
 	city:payload.city,
 	email:payload.email,
 	phoneNo:payload.phoneNo,
