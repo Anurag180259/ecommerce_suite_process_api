@@ -188,6 +188,12 @@ traits:
       x-user-id:
         type: string
         required: true
+  getStoresByVerificationStatus:
+    queryParameters:
+      verificationStatus:
+        type: string
+        required: true
+        enum: [unverified, verified, rejected]
 
 
 

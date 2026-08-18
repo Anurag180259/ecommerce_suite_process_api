@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
     <http:listener-config name="ecommercesuiteprocessapi-httpListenerConfig" tracking:enable-default-events="false">
         <http:listener-connection host="0.0.0.0" port="${http.port}" />
     </http:listener-config>
@@ -146,7 +145,7 @@ output application/json
             <when expression="#[isEmpty(vars.userData)]">
                 <raise-error doc:name="APP:USER_NOT_FOUND" doc:id="045dfa51-5e08-4c93-8ade-e513499eb851" type="APP:USER_NOT_FOUND" />
             </when>
-            <when expression="#[%dw 2.0&#10;output application/json&#10;import java!org::mindrot::jbcrypt::BCrypt&#10;---&#10;!BCrypt::checkpw(payload.password, vars.userData[0].pass)]">
+            <when expression="#[%dw 2.0&#xA;output application/json&#xA;import java!org::mindrot::jbcrypt::BCrypt&#xA;---&#xA;!BCrypt::checkpw(payload.password, vars.userData[0].pass)]">
                 <raise-error doc:name="APP:PASSWORD_MISMATCH" doc:id="fbf1dc33-462f-48cd-b62d-d755eced893a" type="APP:PASSWORD_MISMATCH" />
             </when>
         </choice>
@@ -227,11 +226,11 @@ output application/json
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-		<error-handler >
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="916f749d-b703-4384-a9be-c7cb5bbd501c" when="#[error.errorMessage.attributes.statusCode == 409]">
-				<set-variable value="409" doc:name="httpStatus 409" doc:id="80bc0561-dfb2-4072-874e-8b4e9ed866f3" variableName="httpStatus"/>
-			</on-error-propagate>
-		</error-handler>
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="916f749d-b703-4384-a9be-c7cb5bbd501c" when="#[error.errorMessage.attributes.statusCode == 409]">
+                <set-variable value="409" doc:name="httpStatus 409" doc:id="80bc0561-dfb2-4072-874e-8b4e9ed866f3" variableName="httpStatus" />
+            </on-error-propagate>
+        </error-handler>
     </flow>
     <flow name="post:\admin\setup:application\json:ecommercesuiteprocessapi-config">
         <logger level="INFO" doc:name="Logger" doc:id="b73c81f8-8559-4ce5-ad1b-c5d024ab8ef4" message="POST/exp/admin/setup called process api. processing admin setup." />
@@ -330,7 +329,7 @@ output application/json
 }]]]></http:uri-params>
         </http:request>
         <choice doc:name="Choice" doc:id="795afc77-e97d-4465-9544-9346f9262838">
-            <when expression='#[((vars.storeData)[0]).userId != attributes.headers."x-user-id"]'>
+            <when expression="#[((vars.storeData)[0]).userId != attributes.headers.&quot;x-user-id&quot;]">
                 <raise-error doc:name="APP:FORBIDDEN" doc:id="3cf559f0-d17d-4a9f-9088-0b1f76951859" type="APP:FORBIDDEN" />
             </when>
             <when expression="#[((vars.storeData)[0]).verificationStatus != &quot;verified&quot;]">
@@ -371,11 +370,11 @@ output application/json
         <error-handler>
             <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propogate" doc:id="2920b4f2-8fe4-436a-a80e-49a1917faca3" type="APP:FORBIDDEN">
                 <set-variable value="403" doc:name="httpStatus 403" doc:id="4ca15c8c-5298-4af8-bd76-7f981a4d4786" variableName="httpStatus" />
-				<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	reason:"notAllowed"&#10;}]' doc:name="Set Payload" doc:id="f978a741-94f2-4584-a6d0-999991ba6ee2" />
+                <set-payload value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;{&#xA; reason:&quot;notAllowed&quot;&#xA;}]" doc:name="Set Payload" doc:id="f978a741-94f2-4584-a6d0-999991ba6ee2" />
             </on-error-propagate>
             <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="c005797c-938a-40c1-9268-50b9720cf209" type="APP:UNVERIFIED">
                 <set-variable value="403" doc:name="httpStatus 403" doc:id="d95a1235-f998-4a79-a4da-f34266f15cee" variableName="httpStatus" />
-				<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	reason:"storeNotVerified"&#10;}]' doc:name="Set Payload" doc:id="12f9ead3-c275-4436-b45f-0df6ae2cf415" />
+                <set-payload value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;{&#xA; reason:&quot;storeNotVerified&quot;&#xA;}]" doc:name="Set Payload" doc:id="12f9ead3-c275-4436-b45f-0df6ae2cf415" />
             </on-error-propagate>
         </error-handler>
     </flow>
@@ -1025,5 +1024,11 @@ output application/json
 }]]]></http:uri-params>
             </http:request>
         </foreach>
+    </flow>
+    <flow name="get:\stores\admin:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message="get:\stores\admin:ecommercesuiteprocessapi-config" />
+    </flow>
+    <flow name="get:\stores\seller:ecommercesuiteprocessapi-config">
+        <logger level="INFO" message="get:\stores\seller:ecommercesuiteprocessapi-config" />
     </flow>
 </mule>
