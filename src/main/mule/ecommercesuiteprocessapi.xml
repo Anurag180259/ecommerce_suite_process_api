@@ -5,12 +5,12 @@
     </http:listener-config>
     <apikit:config name="ecommercesuiteprocessapi-config" api="ecommercesuiteprocessapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <http:request-config name="HTTP_Request_configuration_database" doc:name="HTTP Request configuration" doc:id="a18d8e92-845e-4493-b76c-356748915a65" basePath="/database">
-        <http:request-connection host="${http.database.host}" port="${http.database.port}" />
+        <http:request-connection host="${http.database.host}" protocol="HTTPS"/>
     </http:request-config>
     <configuration-properties doc:name="Configuration properties" doc:id="7fc00899-b1fa-41a3-9db3-a914a4bf129e" file="configuration.properties" />
     <configuration doc:name="Configuration" doc:id="77f184da-9787-4603-a756-a3ba59825792" defaultErrorHandler-ref="global-error-handlerError_Handler" />
     <http:request-config name="HTTP_Request_configuration_payment" doc:name="HTTP Request configuration" doc:id="4a6f11c2-5c5f-4089-a9ef-9ba47493c830" basePath="/payment">
-        <http:request-connection host="${http.payment.host}" port="${http.payment.port}" />
+        <http:request-connection host="${http.payment.host}" protocol="HTTPS"/>
     </http:request-config>
     <flow name="ecommercesuiteprocessapi-main">
         <http:listener config-ref="ecommercesuiteprocessapi-httpListenerConfig" path="/process/*">
