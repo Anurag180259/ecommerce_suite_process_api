@@ -1026,9 +1026,25 @@ output application/json
         </foreach>
     </flow>
     <flow name="get:\stores\admin:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message="get:\stores\admin:ecommercesuiteprocessapi-config" />
+        <logger level="INFO" message='#["Processing get stores list for admin"]' />
+		<http:request method="GET" doc:name="GET/database/stores/verificationStatus" doc:id="8ea8490b-a6a1-4e4e-8bb8-35ab8ffef71b" config-ref="HTTP_Request_configuration_database" path="/stores/verificationStatus">
+			<http:body ><![CDATA[#[null]]]></http:body>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"verificationStatus" : attributes.queryParams.verificationStatus
+}]]]></http:query-params>
+		</http:request>
     </flow>
     <flow name="get:\stores\seller:ecommercesuiteprocessapi-config">
-        <logger level="INFO" message="get:\stores\seller:ecommercesuiteprocessapi-config" />
+        <logger level="INFO" message='#["Get store for seller by userId"]' />
+		<http:request method="GET" doc:name="GET/database/stores" doc:id="9ed3bfd4-9cc4-4311-94b2-ced6da8dac93" config-ref="HTTP_Request_configuration_database" path="/stores">
+			<http:body ><![CDATA[#[null]]]></http:body>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"userId" : attributes.headers."x-user-id"
+}]]]></http:query-params>
+		</http:request>
     </flow>
 </mule>
