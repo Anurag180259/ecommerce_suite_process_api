@@ -1,0 +1,40 @@
+{
+  "exceptionPayload": null,
+  "payload": {
+    "deliveryPincode": "100002",
+    "product": {
+      "productId": "P-a8fb8c",
+      "quantity": 3
+    }
+  },
+  "attributes": {
+    "headers": {
+      "x-user-id": "B-467884",
+      "cache-control": "no-cache",
+      "postman-token": "f8274bab-8106-4e98-9cb1-a9da582b0126",
+      "content-type": "application/json",
+      "content-length": "116",
+      "host": "localhost:8082",
+      "user-agent": "PostmanRuntime/2.5.2",
+      "accept": "*/*",
+      "accept-encoding": "gzip, deflate, br",
+      "connection": "keep-alive"
+    },
+    "clientCertificate": null,
+    "method": "POST",
+    "scheme": "http",
+    "queryParams": {},
+    "requestUri": "/process/orders",
+    "queryString": "",
+    "version": "HTTP/1.1",
+    "maskedRequestPath": "/orders",
+    "listenerPath": "/process/*",
+    "localAddress": "/127.0.0.1:8082",
+    "relativePath": "/process/orders",
+    "uriParams": {},
+    "rawRequestUri": "/process/orders",
+    "rawRequestPath": "/process/orders",
+    "remoteAddress": "/127.0.0.1:52380",
+    "requestPath": "/process/orders"
+  }
+}

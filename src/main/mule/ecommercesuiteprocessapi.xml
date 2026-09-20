@@ -182,7 +182,7 @@ output application/json
     </flow>
     <flow name="post:\auth\register:application\json:ecommercesuiteprocessapi-config">
         <logger level="INFO" doc:name="Logger" doc:id="17ed1a5d-ef03-4391-a5f3-93a2a37e5e8c" message="/exp/auth/register called process api. processing registration request" />
-        <set-variable value="#[if(lower(payload.role==&quot;seller&quot;)) &quot;S-&quot; ++ uuid()[0 to 5] &#xA;else &quot;B-&quot; ++ uuid()[0 to 5]]" doc:name="Set Variable" doc:id="c17fc00a-6149-41f6-9de4-7b9632a57be2" variableName="userId" />
+        <set-variable value="#[if(lower(payload.role==&quot;seller&quot;)) &quot;S-&quot; ++ uuid()[0 to 5] &#xA;else &quot;B-&quot; ++ uuid()[0 to 5]]" doc:name="user id" doc:id="c17fc00a-6149-41f6-9de4-7b9632a57be2" variableName="userId" />
         <ee:transform doc:name="Transform Message" doc:id="061ccb06-c19e-4e4b-8d5e-63b534c35298">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
@@ -692,7 +692,8 @@ output application/json
                 </when>
             </choice>
             <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;vars.totalAmount + vars.currentProductDetails[0].price*payload.quantity]" doc:name="totalAmount" doc:id="8af2fa50-abe8-4f23-82e4-9ed062cec890" variableName="totalAmount" />
-            <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;vars.productList ++ [(vars.currentProductDetails[0] ++ {quantity:payload.quantity})]]" doc:name="productList" doc:id="fc6287f3-4839-4217-8c23-c8e92499d032" variableName="productList" />
+            <set-variable value='#["OI-" ++ uuid()[0 to 5]]' doc:name="currentItemId" doc:id="5055ca3d-3f26-411b-8323-338ad7faf576" variableName="currentItemId"/>
+			<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.productList ++ [(vars.currentProductDetails[0] ++ {quantity:payload.quantity,orderItemId:vars.currentItemId})]]" doc:name="productList" doc:id="fc6287f3-4839-4217-8c23-c8e92499d032" variableName="productList" />
             <logger level="INFO" doc:name="Logger" doc:id="07b4c0ca-eb2b-4b0b-86b9-e9d612466d55" message="#[{&#xA; totalAmount:vars.totalAmount&#xA;}]" />
         </foreach>
         <http:request method="POST" doc:name="POST/payment/payments" doc:id="322cc807-b583-4635-82c1-c8a0b6e4ed48" config-ref="HTTP_Request_configuration_payment" path="/payments" target="paymentResponse">
@@ -756,7 +757,7 @@ output application/json
 	deliveryPincode:vars.initialPayload.deliveryPincode,
 	isCart:vars.isCart default false,
 	listOfItems:vars.productList map{
-		orderItemId:"OI-" ++ uuid()[0 to 5],
+		orderItemId:$.orderItemId,
 		productId:$.productId,
 		quantity:$.quantity,
 		orderId:vars.orderId,
@@ -855,31 +856,10 @@ output application/json
 	"userId" : attributes.headers."x-user-id"
 }]]]></http:query-params>
         </http:request>
-        <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;[]]" doc:name="allOrders" doc:id="f574367b-9e8d-4202-9f83-9016d381dfd9" variableName="allOrders" />
-        <foreach doc:name="For Each" doc:id="f61e2aeb-156f-4711-ad33-9235e1f9377f" collection="#[payload]">
-            <http:request method="GET" doc:name="GET/orderItems/orderId" doc:id="8b650a0c-6716-4a7d-86ca-6e387015f06d" config-ref="HTTP_Request_configuration_database" path="/orderItems/orderId" target="currentOrderItems">
-                <http:body><![CDATA[#[null]]]></http:body>
-                <http:query-params><![CDATA[#[output application/java
----
-{
-	"orderId" : payload.orderId
-}]]]></http:query-params>
-            </http:request>
-            <set-variable value="#[%dw 2.0&#xA;output applicaton/json&#xA;---&#xA;[]]" doc:name="allItems" doc:id="8c0f5793-f7fe-4227-9c56-24241fdacdb6" variableName="allItems" />
-            <foreach doc:name="For Each" doc:id="83a272d3-a7c7-4a46-a6a1-c1510a7434a1" collection="#[vars.currentOrderItems]">
-                <http:request method="GET" doc:name="GET/products/{productId}" doc:id="9c12f573-43df-4dd9-8485-d68933ffbd1d" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProduct">
-                    <http:body><![CDATA[#[null]]]></http:body>
-                    <http:uri-params><![CDATA[#[output application/java
----
-{
-	"productId" : payload.productId
-}]]]></http:uri-params>
-                </http:request>
-                <set-variable value="#[%dw 2.0&#xA;output applicaton/json&#xA;---&#xA;vars.allItems ++ [payload ++ {productName:vars.currentProduct[0].productName}]]" doc:name="allItems" doc:id="1b69f744-d4da-4cb9-8d3e-f26252b7ee5e" variableName="allItems" />
-            </foreach>
-            <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;vars.allOrders ++ [payload ++ {orderItems:vars.allItems}]]" doc:name="allOrders" doc:id="ec4f03e9-f323-4828-a209-5f7452b942fa" variableName="allOrders" />
-        </foreach>
-        <ee:transform doc:name="Transform Message" doc:id="3aba7b26-ef1d-428c-b695-676dde721c98">
+		<set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;[]]" doc:name="allOrders" doc:id="f574367b-9e8d-4202-9f83-9016d381dfd9" variableName="allOrders" />
+		<parallel-foreach doc:name="Parallel For Each" doc:id="a994fe94-9883-4732-b376-af5d567cdc47" collection="#[payload]">
+		</parallel-foreach>
+		<ee:transform doc:name="Transform Message" doc:id="3aba7b26-ef1d-428c-b695-676dde721c98">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -899,8 +879,8 @@ vars.allOrders]]></ee:set-payload>
 }]]]></http:query-params>
         </http:request>
         <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;[]]" doc:name="allStoreDetails" doc:id="e94f18bd-75e6-4f1c-be1c-e65833a4d11d" variableName="allStoreDetails" />
-        <foreach doc:name="For Each" doc:id="14221446-3f38-4271-ae0d-fafb2001404a" collection="#[payload]">
-            <http:request method="GET" doc:name="GET/database/orderItems/storeId" doc:id="d830137a-f2ee-445f-a3c2-b3bca906a73f" config-ref="HTTP_Request_configuration_database" path="/orderItems/storeId" target="currentOrderItems">
+        <parallel-foreach doc:name="Parallel For Each" doc:id="904f869d-04e1-4ac6-b4fb-a3bf60b62445" collection="#[payload]">
+			<http:request method="GET" doc:name="GET/database/orderItems/storeId" doc:id="d830137a-f2ee-445f-a3c2-b3bca906a73f" config-ref="HTTP_Request_configuration_database" path="/orderItems/storeId" target="currentOrderItems">
                 <http:body><![CDATA[#[null]]]></http:body>
                 <http:query-params><![CDATA[#[output application/java
 ---
@@ -908,9 +888,9 @@ vars.allOrders]]></ee:set-payload>
 	"storeId" : payload.storeId
 }]]]></http:query-params>
             </http:request>
-            <set-variable value="#[%dw 2.0&#xA;output applicaton/json&#xA;---&#xA;[]]" doc:name="allItems" doc:id="3eca6776-0971-4d6b-bb46-c7174211c92f" variableName="allItems" />
-            <foreach doc:name="For Each" doc:id="16f4b67a-4f0a-440b-8aec-ee42c70108be" collection="#[vars.currentOrderItems]">
-                <http:request method="GET" doc:name="GET/products/{productId}" doc:id="774a5666-7e53-431e-9838-60a3b03193eb" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProduct">
+			<set-variable value="#[%dw 2.0&#xA;output applicaton/json&#xA;---&#xA;[]]" doc:name="allItems" doc:id="3eca6776-0971-4d6b-bb46-c7174211c92f" variableName="allItems" />
+			<parallel-foreach doc:name="Parallel For Each" doc:id="8a415c30-cdb9-4afe-b828-21cc010253de" collection="#[vars.currentOrderItems]">
+				<http:request method="GET" doc:name="GET/products/{productId}" doc:id="774a5666-7e53-431e-9838-60a3b03193eb" config-ref="HTTP_Request_configuration_database" path="/products/{productId}" target="currentProduct">
                     <http:body><![CDATA[#[null]]]></http:body>
                     <http:uri-params><![CDATA[#[output application/java
 ---
@@ -918,10 +898,10 @@ vars.allOrders]]></ee:set-payload>
 	"productId" : payload.productId
 }]]]></http:uri-params>
                 </http:request>
-                <set-variable value="#[%dw 2.0&#xA;output applicaton/json&#xA;---&#xA;vars.allItems ++ [payload ++ {productName:vars.currentProduct[0].productName}]]" doc:name="allItems" doc:id="d474aeb0-fe2c-461c-a8e5-9fb68a3559fc" variableName="allItems" />
-            </foreach>
-            <set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;vars.allStoreDetails ++ [payload ++ {orderItems:vars.allItems}]]" doc:name="allStoreDetails" doc:id="6023f1b9-c3ec-436a-9203-6aa637071f2f" variableName="allStoreDetails" />
-        </foreach>
+				<set-variable value="#[%dw 2.0&#xA;output applicaton/json&#xA;---&#xA;vars.allItems ++ [payload ++ {productName:vars.currentProduct[0].productName}]]" doc:name="allItems" doc:id="d474aeb0-fe2c-461c-a8e5-9fb68a3559fc" variableName="allItems" />
+			</parallel-foreach>
+			<set-variable value="#[%dw 2.0&#xA;output application/json&#xA;---&#xA;vars.allStoreDetails ++ [payload ++ {orderItems:vars.allItems}]]" doc:name="allStoreDetails" doc:id="6023f1b9-c3ec-436a-9203-6aa637071f2f" variableName="allStoreDetails" />
+		</parallel-foreach>
         <ee:transform doc:name="Transform Message" doc:id="af7d814c-2c7c-4f15-b7b3-496a68f182d0">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
@@ -934,12 +914,12 @@ vars.allStoreDetails]]></ee:set-payload>
     <flow name="patch:\orders\(orderId)\cancellation:ecommercesuiteprocessapi-config">
         <logger level="INFO" message="#[&quot;Cancelling orderId:&quot; ++ attributes.uriParams.orderId]" />
         <flow-ref doc:name="ownerShipCheckForOrderId" doc:id="0565824a-a967-403b-a0d1-9fb2591751d9" name="ownerShipCheckForOrderId" />
-        <http:request method="PATCH" doc:name="PATCH/payment/{transactionId}/reversePayment" doc:id="d3e91356-dd7d-45cd-8ab2-a185a178c46b" config-ref="HTTP_Request_configuration_payment" path="/{transactionId}/reversePayment">
+        <http:request method="PATCH" doc:name="PATCH/payment/{transactionId}/reversePayment" doc:id="d3e91356-dd7d-45cd-8ab2-a185a178c46b" config-ref="HTTP_Request_configuration_payment" path="/payments/{transactionId}/reversePayment">
             <http:body><![CDATA[#[null]]]></http:body>
             <http:uri-params><![CDATA[#[output application/java
 ---
 {
-	"transactionId" : vars.orderDetails.transactionId
+	"transactionId" : vars.orderDetails[0].transactionId
 }]]]></http:uri-params>
         </http:request>
         <http:request method="PATCH" doc:name="PATCH/orders/{orderId}/cancellation" doc:id="920b2c52-f79d-46d3-ad1f-0b5dac24dad7" config-ref="HTTP_Request_configuration_database" path="/orders/{orderId}/cancellation">

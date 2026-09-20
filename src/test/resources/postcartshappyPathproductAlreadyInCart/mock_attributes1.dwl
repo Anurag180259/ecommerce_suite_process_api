@@ -1,0 +1,30 @@
+{
+  "headers": {
+    "x-user-id": "B-467884",
+    "cache-control": "no-cache",
+    "postman-token": "aaa1e868-38ee-4420-b895-1f6ceec77555",
+    "content-type": "application/json",
+    "content-length": "51",
+    "host": "localhost:8082",
+    "user-agent": "PostmanRuntime/2.5.1",
+    "accept": "*/*",
+    "accept-encoding": "gzip, deflate, br",
+    "connection": "keep-alive"
+  },
+  "clientCertificate": null,
+  "method": "POST",
+  "scheme": "http",
+  "queryParams": {},
+  "requestUri": "/process/carts",
+  "queryString": "",
+  "version": "HTTP/1.1",
+  "maskedRequestPath": "/carts",
+  "listenerPath": "/process/*",
+  "localAddress": "/127.0.0.1:8082",
+  "relativePath": "/process/carts",
+  "uriParams": {},
+  "rawRequestUri": "/process/carts",
+  "rawRequestPath": "/process/carts",
+  "remoteAddress": "/127.0.0.1:58440",
+  "requestPath": "/process/carts"
+}
